@@ -32,6 +32,7 @@ export interface InventoryMovement {
   date: string; // ISO string o Timestamp
   type: 'ingreso' | 'egreso' | 'ajuste';
   cashierEmail?: string;
+  cashierName?: string;
   productName?: string;
   initialStock?: number;
   finalStock?: number;

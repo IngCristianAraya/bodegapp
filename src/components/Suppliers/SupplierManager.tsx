@@ -6,6 +6,7 @@ import {
   actualizarProveedor,
   eliminarProveedor
 } from '../../lib/supabaseSuppliers';
+import { useTenant } from '../../contexts/TenantContext';
 import type { Supplier } from '../../types/index';
 import { Plus, Edit2, Trash2, Phone, Mail, MapPin, Truck } from 'lucide-react';
 
@@ -27,10 +28,13 @@ const SupplierManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const { tenant } = useTenant();
+
   const fetchProveedores = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
     try {
-      const data = await obtenerProveedores();
+      const data = await obtenerProveedores(tenant.id);
       setProveedores(data);
     } catch {
       setError('Error al cargar proveedores');
@@ -49,10 +53,10 @@ const SupplierManager: React.FC = () => {
     setError(null);
     setSuccess(null);
     try {
-      if (editId) {
-        await actualizarProveedor(editId, form);
+      if (editId && tenant?.id) {
+        await actualizarProveedor(editId, form, tenant.id);
         setSuccess('Proveedor actualizado');
-      } else {
+      } else if (tenant?.id) {
         const { name, contact, phone, address } = form;
         if (!name || !contact || !phone || !address) {
           setError('Completa todos los campos obligatorios');
@@ -68,7 +72,7 @@ const SupplierManager: React.FC = () => {
           products: [],
           createdAt: new Date(),
         };
-        await crearProveedor(proveedorNuevo);
+        await crearProveedor(proveedorNuevo, tenant.id);
         setSuccess('Proveedor creado');
       }
       setModalOpen(false);
@@ -92,9 +96,11 @@ const SupplierManager: React.FC = () => {
     if (!window.confirm('¿Eliminar proveedor?')) return;
     setLoading(true);
     try {
-      await eliminarProveedor(id);
-      setSuccess('Proveedor eliminado');
-      fetchProveedores();
+      if (tenant?.id) {
+        await eliminarProveedor(id, tenant.id);
+        setSuccess('Proveedor eliminado');
+        fetchProveedores();
+      }
     } catch {
       setError('Error al eliminar');
     } finally {

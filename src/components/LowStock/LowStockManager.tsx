@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { obtenerProductos } from '../../lib/supabaseProducts';
+import { useTenant } from '../../contexts/TenantContext';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import { Product } from '../../types/inventory';
@@ -10,11 +11,14 @@ const LowStockManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { tenant } = useTenant();
+
   const fetchProductos = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await obtenerProductos();
+      const data = await obtenerProductos(tenant.id);
       // Filtra sólo los productos que tienen los campos mínimos requeridos para evitar errores de tipo
       setProductos(
         (data as Product[]).filter(p => typeof p.name === 'string' && typeof p.stock === 'number' && typeof p.minStock === 'number')

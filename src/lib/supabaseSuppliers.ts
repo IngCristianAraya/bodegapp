@@ -36,6 +36,7 @@ export async function obtenerProveedores(tenantId: string): Promise<Supplier[]> 
         return [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.map((item: any) => ({
         id: item.id,
         name: item.name,

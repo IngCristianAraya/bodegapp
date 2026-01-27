@@ -12,7 +12,7 @@ interface Props {
   companyId: string;
 }
 
-const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose }) => {
+const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, companyId }) => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +20,7 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose }) =>
     const fetchMovements = async () => {
       setLoading(true);
       try {
-        const movs = await obtenerMovimientosProducto(product.id);
+        const movs = await obtenerMovimientosProducto(product.id, companyId);
         setMovements(movs.sort((a, b) => (b.date > a.date ? 1 : -1)));
       } catch {
         setMovements([]);

@@ -5,7 +5,8 @@ import {
   obtenerClientes,
   actualizarCliente,
   eliminarCliente
-} from '../../lib/firestoreCustomers';
+} from '../../lib/supabaseCustomers';
+import { useTenant } from '../../contexts/TenantContext';
 import { Customer } from '../../types/index';
 
 const initialForm: Partial<Customer> = {
@@ -23,10 +24,13 @@ const CustomerManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const { tenant } = useTenant();
+
   const fetchClientes = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
     try {
-      const data = await obtenerClientes();
+      const data = await obtenerClientes(tenant.id);
       setClientes(data);
     } catch {
       setLoading(false);
@@ -44,11 +48,11 @@ const CustomerManager: React.FC = () => {
     setLoading(true);
     setSuccess(null);
     try {
-      if (editId) {
-        await actualizarCliente(editId, form);
+      if (editId && tenant?.id) {
+        await actualizarCliente(editId, form, tenant.id);
         setSuccess('Cliente actualizado');
-      } else {
-        await crearCliente(form as Customer);
+      } else if (tenant?.id) {
+        await crearCliente(form as Customer, tenant.id);
         setSuccess('Cliente creado');
       }
       setModalOpen(false);
@@ -72,9 +76,11 @@ const CustomerManager: React.FC = () => {
     if (!window.confirm('¿Eliminar cliente?')) return;
     setLoading(true);
     try {
-      await eliminarCliente(id);
-      setClientes(clientes.filter(c => c.id !== id));
-      setSuccess('Cliente eliminado correctamente');
+      if (tenant?.id) {
+        await eliminarCliente(id, tenant.id);
+        setClientes(clientes.filter(c => c.id !== id));
+        setSuccess('Cliente eliminado correctamente');
+      }
     } catch (error) {
       console.error('Error al eliminar cliente:', error);
       setSuccess('Error al eliminar cliente');

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { saveStoreInfo, getStoreInfo } from '../../lib/supabaseSettings';
 import { useToast } from '../../contexts/ToastContext';
+import { useTenant } from '../../contexts/TenantContext';
 import HowToUseSystem from './HowToUseSystem';
 import ExportDataButton from './ExportDataButton';
-import styles from './Settings.module.css';
-import { FiSave, FiInfo, FiHome, FiFileText, FiDollarSign, FiSettings, FiTool } from 'react-icons/fi';
+import { FiSave, FiHome, FiFileText, FiInfo, FiSettings, FiTool, FiDollarSign } from 'react-icons/fi';
 
 // Tipo para los datos de la empresa/tienda
 export interface StoreInfo {
@@ -14,7 +13,6 @@ export interface StoreInfo {
   address: string;
 }
 
-// Utiliza localStorage por simplicidad (puedes migrar a Firestore si lo deseas)
 const STORAGE_KEY = 'storeInfo';
 
 const Settings: React.FC = () => {
@@ -24,36 +22,38 @@ const Settings: React.FC = () => {
     address: '',
   });
   const [saved, setSaved] = useState(false);
-  const { user } = useAuth();
   const { showToast } = useToast();
+  const { tenant } = useTenant();
   const [loading, setLoading] = useState(true);
 
-  // Al montar, intenta cargar primero desde Firestore, luego localStorage
+  // Al montar, intenta cargar desde Supabase basado en tenant
   useEffect(() => {
     const fetchData = async () => {
-      if (user && user.uid) {
+      if (tenant?.id) {
+        setLoading(true);
         try {
-          const firestoreInfo = await getStoreInfo(user.uid);
-          if (firestoreInfo) {
-            setStoreInfo(firestoreInfo);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(firestoreInfo));
-            setLoading(false);
-            return;
+          const info = await getStoreInfo(tenant.id);
+          if (info) {
+            setStoreInfo(info);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+          } else {
+            const savedInfo = localStorage.getItem(STORAGE_KEY);
+            if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
           }
         } catch {
-          // Si falla Firestore, sigue con localStorage
+          const savedInfo = localStorage.getItem(STORAGE_KEY);
+          if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
+        } finally {
+          setLoading(false);
         }
+      } else {
+        const savedInfo = localStorage.getItem(STORAGE_KEY);
+        if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
+        setLoading(false);
       }
-      // fallback localStorage
-      const savedInfo = localStorage.getItem(STORAGE_KEY);
-      if (savedInfo) {
-        setStoreInfo(JSON.parse(savedInfo));
-      }
-      setLoading(false);
     };
     fetchData();
-
-  }, [user]);
+  }, [tenant?.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setStoreInfo({ ...storeInfo, [e.target.name]: e.target.value });
@@ -63,19 +63,18 @@ const Settings: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(storeInfo));
-    let ok = true;
-    if (user && user.uid) {
+    if (tenant?.id) {
       try {
-        await saveStoreInfo(user.uid, storeInfo);
+        await saveStoreInfo(tenant.id, storeInfo);
         showToast('Datos guardados en la nube', 'success');
+        setSaved(true);
       } catch {
-
         showToast('Error al guardar en la nube', 'error');
-        ok = false;
       }
+    } else {
+      showToast('¡Datos guardados localmente! (Identifica tu tienda para guardar en nube)');
+      setSaved(true);
     }
-    setSaved(true);
-    if (ok) showToast('¡Datos guardados!');
   };
 
   if (loading) {
@@ -88,8 +87,6 @@ const Settings: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-      {/* Información de la Tienda */}
       <div className="glass-card rounded-2xl shadow-xl overflow-hidden bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
           <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
@@ -173,7 +170,6 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Herramientas */}
       <div className="glass-card rounded-2xl shadow-xl overflow-hidden bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
           <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">

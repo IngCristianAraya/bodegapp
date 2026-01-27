@@ -14,6 +14,7 @@ export async function obtenerVentas(tenantId: string): Promise<Sale[]> {
         return [];
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.map((sale: any) => ({
         id: sale.id,
         receiptNumber: sale.receipt_number || '',
@@ -28,7 +29,9 @@ export async function obtenerVentas(tenantId: string): Promise<Sale[]> {
         paymentMethod: sale.payment_method || '',
         createdAt: sale.created_at ? new Date(sale.created_at) : new Date(),
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: Array.isArray(sale.sale_items)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ? sale.sale_items.map((item: any) => ({
                 productId: item.product_id,
                 productName: item.product_name,

@@ -1,10 +1,10 @@
 
 
 import JSZip from 'jszip';
-import { obtenerProductos } from './firestoreProducts';
-import { obtenerVentas } from './firestoreSales';
-import { obtenerClientes } from './firestoreCustomers';
-import { obtenerProveedores } from './firestoreSuppliers';
+import { obtenerProductos } from './supabaseProducts';
+import { obtenerVentas } from './supabaseSales';
+import { obtenerClientes } from './supabaseCustomers';
+import { obtenerProveedores } from './supabaseSuppliers';
 
 // Type for objects that can be converted to CSV
 type CSVObject = Record<string, string | number | boolean | null | undefined | Date>;
@@ -28,10 +28,10 @@ function arrayToCSV(arr: CSVObject[]): string {
   if (!arr.length) return '';
   const keys = Object.keys(arr[0]);
   const header = keys.join(';');
-  const rows = arr.map(obj => 
+  const rows = arr.map(obj =>
     keys.map(k => {
       const value = obj[k];
-      return value !== null && value !== undefined 
+      return value !== null && value !== undefined
         ? String(value).replace(/\r?\n|\r/g, ' ')
         : '';
     }).join(';')
@@ -43,25 +43,25 @@ export async function exportDataToCSV<T extends Record<string, unknown>>(data: T
   const zip = new JSZip();
   // Convert each item to CSVObject
   const csvData: CSVObject[] = data.map(item => toCSVObject(item));
-  
+
   zip.file(`${filename}.csv`, arrayToCSV(csvData));
   return zip.generateAsync({ type: 'blob' });
 }
 
-export async function exportAllDataToCSV(): Promise<Blob> {
+export async function exportAllDataToCSV(tenantId: string): Promise<Blob> {
   const zip = new JSZip();
-  
+
   // Fetch all data in parallel
   const [productos, ventas, clientes, proveedores] = await Promise.all([
-    obtenerProductos(),
-    obtenerVentas(),
-    obtenerClientes(),
-    obtenerProveedores()
+    obtenerProductos(tenantId),
+    obtenerVentas(tenantId),
+    obtenerClientes(tenantId),
+    obtenerProveedores(tenantId)
   ]);
 
   // Process and add each data type to the ZIP
   const addDataToZip = async (
-    data: unknown[], 
+    data: unknown[],
     filename: string
   ) => {
     // Convert each item to a plain object with string values

@@ -6,11 +6,13 @@ import ReportsMenu from './ReportsMenu';
 import InventoryMovementsReport from './InventoryMovementsReport';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
-import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
+import { exportAllDataToCSV } from '../../lib/exportData';
 import { Sale, Product, SaleItem } from '../../types/index';
 import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const Reports: React.FC = () => {
+  const { tenant } = useTenant();
   const [showTicketModal, setShowTicketModal] = React.useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<Sale | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
@@ -26,11 +28,12 @@ const Reports: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const cargarVentasYProductos = async (): Promise<void> => {
+    if (!tenant?.id) return;
     setLoading(true);
     try {
       const [ventasData, productosData] = await Promise.all([
-        obtenerVentas(),
-        obtenerProductos()
+        obtenerVentas(tenant.id),
+        obtenerProductos(tenant.id)
       ]);
       setVentas(ventasData);
       setProductos(productosData);
@@ -40,14 +43,31 @@ const Reports: React.FC = () => {
   }
 
   const cargarProductos = async (): Promise<void> => {
+    if (!tenant?.id) return;
     setLoading(true);
     try {
-      const productosData = await obtenerProductos();
+      const productosData = await obtenerProductos(tenant.id);
       setProductos(productosData);
     } finally {
       setLoading(false);
     }
   }
+
+  const handleExportAll = async () => {
+    if (!tenant?.id) return;
+    try {
+      const blob = await exportAllDataToCSV(tenant.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'todos_los_datos.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al exportar todos los datos:', error);
+      alert('Error al exportar todos los datos.');
+    }
+  };
 
   useEffect(() => {
     setLoading(true);

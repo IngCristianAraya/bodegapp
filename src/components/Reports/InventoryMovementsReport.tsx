@@ -1,22 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { obtenerTodosMovimientosInventario } from '../../lib/supabaseInventory';
+import { useTenant } from '../../contexts/TenantContext';
+import { InventoryMovement } from '../../types/inventory';
 
-
-
-interface InventoryMovement {
-  id: string;
-  productId: string;
-  quantity: number;
-  costPrice: number;
-  date: unknown;
-  type: 'ingreso' | 'egreso' | 'ajuste';
-  motivo?: string;
-  cashierEmail?: string;
-  cashierName?: string;
-  productName?: string;
-  initialStock?: number;
-  finalStock?: number;
-}
 
 const colorForQuantity = (qty: number) =>
   qty < 0 ? 'text-red-600 font-bold' : qty > 0 ? 'text-green-600 font-bold' : '';
@@ -30,20 +16,27 @@ const InventoryMovementsReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
+  const { tenant } = useTenant();
+
   useEffect(() => {
-    async function fetchMovements() {
+    const fetchMovements = async () => {
+      if (!tenant?.id) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        const data = await obtenerTodosMovimientosInventario();
+        const data = await obtenerTodosMovimientosInventario(tenant.id);
         setMovements(data);
-      } catch {
+      } catch (error) {
+        console.error("Error fetching inventory movements:", error);
         setMovements([]);
       } finally {
         setLoading(false);
       }
-    }
+    };
     fetchMovements();
-  }, []);
+  }, [tenant?.id]);
 
   // Paginación
   const totalPages = Math.ceil(movements.length / MOVEMENTS_PER_PAGE);
@@ -93,12 +86,12 @@ const InventoryMovementsReport: React.FC = () => {
                     <tr key={mov.id} className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors">
                       <td className="py-2 px-4 border-b dark:border-slate-800 text-center font-semibold">{startNumber - idx}</td>
                       <td className="py-2 px-4 border-b dark:border-slate-800 whitespace-nowrap">{dateStr}</td>
-                      <td className="py-2 px-4 border-b dark:border-slate-800 whitespace-nowrap">{mov.cashierEmail || '-'}</td>
+                      <td className="py-2 px-4 border-b dark:border-slate-800 whitespace-nowrap">{mov.cashierName || '-'}</td>
                       <td className="py-2 px-4 border-b dark:border-slate-800 whitespace-nowrap font-medium text-gray-900 dark:text-white">{mov.productName || mov.productId}</td>
                       <td className="py-2 px-4 border-b dark:border-slate-800 text-center capitalize">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${mov.type === 'ingreso' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                          mov.type === 'egreso' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            mov.type === 'egreso' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                           }`}>
                           {mov.type || '-'}
                         </span>

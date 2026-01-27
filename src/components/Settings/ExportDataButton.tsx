@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Download } from 'lucide-react';
 import { exportAllDataToCSV } from '../../lib/exportData';
+import { useTenant } from '../../contexts/TenantContext';
 
 const ExportDataButton: React.FC = () => {
-  const { user } = useAuth();
+  const { tenant } = useTenant();
   const [loading, setLoading] = useState(false);
 
   const handleExport = async () => {
-    if (!user) return;
+    if (!tenant?.id) return;
     setLoading(true);
     try {
-      const blob = await exportAllDataToCSV();
+      const blob = await exportAllDataToCSV(tenant.id);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

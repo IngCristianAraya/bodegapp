@@ -1,4 +1,4 @@
-import React, { FC, useCallback, useEffect } from 'react';
+import React, { FC, useCallback, useEffect, useState, useMemo } from 'react';
 import type { Product } from '../../types/inventory';
 import type { Sale } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,21 +15,32 @@ import StatsCard from './StatsCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
+import { useTenant } from '../../contexts/TenantContext';
 import { calculateDailyEarnings } from '../../utils/calculateDailyEarnings';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 type Period = 'day' | 'week' | 'month';
 
+interface DashboardStats {
+  todaySales: number;
+  todayOrders: number;
+  weekSales: number;
+  monthSales: number;
+  lowStockCount: number;
+  topProducts: { name: string; sales: number; revenue: number }[];
+}
+
 const Dashboard: FC = () => {
   const { user } = useAuth();
-  const [ventas, setVentas] = React.useState<Sale[]>([]);
-  const [productos, setProductos] = React.useState<Product[]>([]);
-  const [topProducts, setTopProducts] = React.useState<{ name: string; sales: number; revenue: number }[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = React.useState<Period>('month');
+  const { tenant } = useTenant();
+  const [ventas, setVentas] = useState<Sale[]>([]);
+  const [productos, setProductos] = useState<Product[]>([]);
+  const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number }[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
 
   // Calcular ventas reales de la semana agrupadas por día
-  const salesData = React.useMemo(() => {
+  const salesData = useMemo(() => {
     // Inicializar estructura para cada día de la semana
     const hoy = new Date();
     // Buscar el lunes de la semana actual
@@ -116,9 +127,8 @@ const Dashboard: FC = () => {
         if (!producto) return;
 
         const cantidad = item.quantity || 0;
-        // La propiedad en SaleItem suele ser unitPrice, no salePrice
-        const precio = 'unitPrice' in item ? Number(item.unitPrice) : ('salePrice' in item ? Number(item.salePrice) : 0);
-        const total = 'total' in item ? Number(item.total) : precio * cantidad;
+        const precio = Number(item.unitPrice) || 0;
+        const total = Number(item.total) || precio * cantidad;
 
         const existente = productosVendidos.get(producto.id) || { name: producto.name, sales: 0, revenue: 0 };
         productosVendidos.set(producto.id, {
@@ -136,10 +146,11 @@ const Dashboard: FC = () => {
 
   useEffect(() => {
     const cargarDatos = async () => {
+      if (!tenant?.id) return;
       try {
         const [ventasCargadas, productosCargados] = await Promise.all([
-          obtenerVentas(),
-          obtenerProductos()
+          obtenerVentas(tenant.id),
+          obtenerProductos(tenant.id)
         ]);
         setVentas(ventasCargadas);
         setProductos(productosCargados);
@@ -148,7 +159,7 @@ const Dashboard: FC = () => {
       }
     };
     cargarDatos();
-  }, []);
+  }, [tenant?.id]);
 
   useEffect(() => {
     if (productos.length > 0 && ventas.length > 0) {
