@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { InventoryMovement, Product } from '../../types/inventory';
-import { obtenerMovimientosProducto } from '../../lib/firestoreInventory';
+import { obtenerMovimientosProducto } from '../../lib/supabaseInventory';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface Props {
+  isOpen: boolean;
   product: Product;
   onClose: () => void;
+  companyId: string;
 }
 
-const InventoryHistoryModal: React.FC<Props> = ({ product, onClose }) => {
+const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose }) => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,59 +79,85 @@ const InventoryHistoryModal: React.FC<Props> = ({ product, onClose }) => {
     doc.save(`historial_${product.code || product.name}.pdf`);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-lg relative">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl">×</button>
-        {/* Botones de exportación */}
-        <div className="flex justify-end gap-2 mb-2">
-          <button
-            className="px-3 py-1 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700"
-            onClick={handleExportExcel}
-          >Exportar a Excel</button>
-          <button
-            className="px-3 py-1 bg-gray-700 text-white rounded text-xs hover:bg-gray-900"
-            onClick={handleExportPDF}
-          >Exportar a PDF</button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-2xl w-full shadow-2xl border border-gray-100 dark:border-gray-800 relative max-h-[90vh] flex flex-col">
+
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <div className="mb-6 pr-10">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight mb-1">Historial de Ingresos</h2>
+          <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm uppercase tracking-wide">{product.name}</p>
         </div>
-        <h2 className="text-xl font-bold mb-4">Historial de Ingresos - {product.name}</h2>
-        {loading ? (
-          <div className="text-center text-gray-500 py-8">Cargando movimientos...</div>
-        ) : movements.length === 0 ? (
-          <div className="text-center text-gray-400 py-8">No hay ingresos registrados para este producto.</div>
-        ) : (
-          <table className="w-full text-sm mt-2">
-            <thead>
-              <tr className="border-b">
-                <th className="py-2 text-left">Fecha</th>
-                <th className="py-2 text-right">Cantidad</th>
-                <th className="py-2 text-right">Precio Compra</th>
-                <th className="py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movements.map((mov) => (
-                <tr key={mov.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2">{
-                    (() => {
-                      if (!mov.date) return '-';
-                      // Firestore Timestamp
-                      if (typeof mov.date === 'object' && mov.date !== null && 'seconds' in mov.date) {
-                        return new Date((mov.date as { seconds: number }).seconds * 1000).toLocaleString();
-                      }
-                      // ISO string or number
-                      const d = new Date(mov.date);
-                      return isNaN(d.getTime()) ? '-' : d.toLocaleString();
-                    })()
-                  }</td>
-                  <td className="py-2 text-right">{mov.quantity}</td>
-                  <td className="py-2 text-right">S/ {typeof mov.costPrice === 'number' ? mov.costPrice.toFixed(2) : '-'}</td>
-                  <td className="py-2 text-right">S/ {typeof mov.quantity === 'number' && typeof mov.costPrice === 'number' ? (mov.quantity * mov.costPrice).toFixed(2) : '-'}</td>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 mb-6">
+          <button
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all active:scale-95"
+            onClick={handleExportExcel}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>
+            Excel
+          </button>
+          <button
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+            onClick={handleExportPDF}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><path d="M12 18v-6" /><path d="m9 15 3 3 3-3" /></svg>
+            PDF
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {loading ? (
+            <div className="text-center text-gray-400 dark:text-gray-500 py-12 animate-pulse font-bold uppercase text-xs tracking-widest">Cargando movimientos...</div>
+          ) : movements.length === 0 ? (
+            <div className="text-center text-gray-400 dark:text-gray-600 py-12 italic">No hay ingresos registrados para este producto.</div>
+          ) : (
+            <table className="w-full text-sm border-separate border-spacing-y-2">
+              <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10">
+                <tr className="text-[10px] uppercase font-black text-gray-400 dark:text-gray-500 tracking-widest">
+                  <th className="px-4 py-2 text-left">Fecha</th>
+                  <th className="px-4 py-2 text-right">Cantidad</th>
+                  <th className="px-4 py-2 text-right">Costo</th>
+                  <th className="px-4 py-2 text-right">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody className="divide-y divide-transparent">
+                {movements.map((mov) => (
+                  <tr key={mov.id} className="bg-gray-50/50 dark:bg-slate-800/40 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+                      {(() => {
+                        if (!mov.date) return '-';
+                        if (typeof mov.date === 'object' && mov.date !== null && 'seconds' in mov.date) {
+                          return new Date((mov.date as { seconds: number }).seconds * 1000).toLocaleDateString();
+                        }
+                        const d = new Date(mov.date);
+                        return isNaN(d.getTime()) ? '-' : d.toLocaleDateString();
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 text-right font-black text-gray-900 dark:text-white">
+                      {mov.quantity}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-700 dark:text-gray-300">
+                      S/ {typeof mov.costPrice === 'number' ? mov.costPrice.toFixed(2) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400">
+                      S/ {typeof mov.quantity === 'number' && typeof mov.costPrice === 'number' ? (mov.quantity * mov.costPrice).toFixed(2) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

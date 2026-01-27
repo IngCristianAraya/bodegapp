@@ -1,39 +1,37 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useState, useEffect, useCallback } from 'react';
+import { obtenerProductos } from '../lib/supabaseProducts';
 import type { Product } from '../types/inventory';
 
-export const useProducts = () => {
+export const useProducts = (tenantId?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const q = query(collection(db, 'products'), orderBy('name'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        // Inferir unitType y ventaPorPeso si no existen (compatibilidad legacy)
-        const unitType = data.unitType || (data.unit === 'kg' ? 'kg' : 'unidad');
-        const ventaPorPeso = typeof data.ventaPorPeso === 'boolean' ? data.ventaPorPeso : (unitType === 'kg');
-        return {
-          id: doc.id,
-          ...data,
-          unitType,
-          ventaPorPeso,
-          isExonerated: Boolean(data.isExonerated),
-          isExemptIGV: Boolean(data.isExemptIGV),
-          igvIncluded: data.igvIncluded !== false, // por defecto true
-          createdAt: data.createdAt?.toDate?.() ?? data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.() ?? data.updatedAt
-        } as Product;
-      });
-      setProducts(productsData);
+  const fetchProducts = useCallback(async () => {
+    if (!tenantId) {
+      setProducts([]);
       setLoading(false);
-    });
+      return;
+    }
 
-    return unsubscribe;
-  }, []);
+    try {
+      setLoading(true);
+      const data = await obtenerProductos(tenantId);
+      const productsData = data.map((item: any) => ({
+        ...item,
+        unitType: item.unitType || (item.unit === 'kg' ? 'kg' : 'unidad'),
+        ventaPorPeso: typeof item.ventaPorPeso === 'boolean' ? item.ventaPorPeso : (item.unit === 'kg'),
+      } as Product));
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
 
-  return { products, loading };
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  return { products, loading, refetch: fetchProducts };
 };

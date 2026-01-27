@@ -1,5 +1,5 @@
 import React from 'react';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface StatsCardProps {
@@ -13,34 +13,62 @@ interface StatsCardProps {
   };
 }
 
+const colorMap: Record<string, { bgIcon: string, textIcon: string, blob: string, ring: string }> = {
+  emerald: {
+    bgIcon: 'bg-emerald-50 dark:bg-emerald-900/40',
+    textIcon: 'text-emerald-700 dark:text-emerald-400',
+    blob: 'bg-emerald-500/10 group-hover:bg-emerald-500/20',
+    ring: 'ring-emerald-200/30'
+  },
+  amber: {
+    bgIcon: 'bg-amber-50 dark:bg-amber-900/40',
+    textIcon: 'text-amber-700 dark:text-amber-400',
+    blob: 'bg-amber-500/10 group-hover:bg-amber-500/20',
+    ring: 'ring-amber-200/30'
+  },
+  blue: {
+    bgIcon: 'bg-blue-50 dark:bg-blue-900/40',
+    textIcon: 'text-blue-700 dark:text-blue-400',
+    blob: 'bg-blue-500/10 group-hover:bg-blue-500/20',
+    ring: 'ring-blue-200/30'
+  },
+  red: {
+    bgIcon: 'bg-red-50 dark:bg-red-900/40',
+    textIcon: 'text-red-700 dark:text-red-400',
+    blob: 'bg-red-500/10 group-hover:bg-red-500/20',
+    ring: 'ring-red-200/30'
+  }
+};
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, trend }) => {
+  // Extraer el color base (ej: 'bg-emerald-500' -> 'emerald')
+  const colorName = color.replace('bg-', '').replace('-500', '') || 'emerald';
+  const theme = colorMap[colorName] || colorMap.emerald;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      whileHover={{ scale: 1.03, boxShadow: '0 8px 32px 0 rgba(16,185,129,0.14)', borderColor: '#34d399' }}
-      className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 cursor-pointer"
-    >
-      <div className="flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-2xl p-6 glass-card group hover:scale-[1.02] transition-transform duration-300 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 shadow-sm">
+      {/* Fondo degradado sutil */}
+      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl transition-all ${theme.blob}`} />
+
+      <div className="flex items-start justify-between relative z-10">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">{title}</p>
+          <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">{value}</h3>
+
           {trend && (
-            <div className={`flex items-center mt-2 text-sm ${
-              trend.isPositive ? 'text-green-600' : 'text-red-600'
-            }`}>
-              <span>{trend.isPositive ? '+' : ''}{trend.value}%</span>
-              <span className="text-gray-500 ml-1">vs mes anterior</span>
+            <div className={`flex items-center mt-2 text-xs font-bold ${trend.isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+              {trend.isPositive ? <ArrowUpRight size={14} className="mr-1" /> : <ArrowDownRight size={14} className="mr-1" />}
+              <span>{trend.value}%</span>
+              <span className="text-gray-500 dark:text-gray-400 font-medium ml-1">vs mes anterior</span>
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon size={24} className="text-white" />
+
+        <div className={`p-3 rounded-xl transition-all duration-300 shadow-sm group-hover:shadow-md ring-1 ring-inset ${theme.bgIcon} ${theme.textIcon} ${theme.ring}`}>
+          <Icon size={24} />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

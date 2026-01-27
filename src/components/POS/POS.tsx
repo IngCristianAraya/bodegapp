@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 import ProductSearch from "@/components/POS/ProductSearch";
 import ProductGrid from "@/components/POS/ProductGrid";
@@ -7,9 +7,10 @@ import Cart from "@/components/POS/Cart";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTenant } from "@/contexts/TenantContext";
 import CategoryBadge from "@/components/common/CategoryBadge";
 
-import { crearVenta, descontarStockProductos } from "@/lib/firestoreSales";
+import { crearVenta, descontarStockProductos, obtenerVentas } from "@/lib/supabaseSales";
 import SuccessToast from "@/components/common/SuccessToast";
 import TicketVenta from "./TicketVenta";
 import { useReactToPrint } from 'react-to-print';
@@ -32,18 +33,21 @@ const POS: React.FC = () => {
     total: number;
   } | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
-  // NOTA: Si el tipo de useReactToPrint no acepta 'content', puede ser necesario actualizar la dependencia o extender el tipo.
-  // Aquí se usa la firma correcta para la mayoría de implementaciones actuales.
-  // Workaround: los tipos de react-to-print@3.1.1 no incluyen 'content' en UseReactToPrintOptions,
-  // pero la implementación sí lo acepta. Forzamos el cast a 'any' solo aquí para evitar el error de build.
-  // Referencia: https://github.com/gregnb/react-to-print/issues/674
+  // Definir el tipo extendido que incluye la propiedad 'content'
+  type PrintConfig = {
+    content: () => HTMLDivElement | null;
+    documentTitle?: string;
+    // Otras propiedades opcionales que puedas necesitar
+  };
+
   const handlePrint = useReactToPrint({
-    content: () => ticketRef.current as HTMLDivElement | null,
+    content: () => ticketRef.current,
     documentTitle: ventaTicket?.receiptNumber ? `Boleta_${ventaTicket.receiptNumber}` : 'Boleta',
-  } as any);
+  } as unknown as PrintConfig);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const { products, loading } = useProducts();
+  const { tenant } = useTenant();
+  const { products, loading } = useProducts(tenant?.id);
 
   const { state, addItem, clearCart } = useCart();
   const { user } = useAuth();
@@ -62,7 +66,7 @@ const POS: React.FC = () => {
 
   // --- Restaurar lógica de paginación ---
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 10;
+  const productsPerPage = 20;
   // Calcular productos de la página actual
   const paginatedProducts = React.useMemo(() => {
     const start = (currentPage - 1) * productsPerPage;
@@ -73,9 +77,11 @@ const POS: React.FC = () => {
   useEffect(() => {
     // Siempre usar productos reales de Firestore
     let filtered = products;
-    
+
     if (selectedCategory) {
-      filtered = filtered.filter((product: Product) => product.category === selectedCategory);
+      filtered = filtered.filter((product: Product) =>
+        product.category?.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+      );
     }
     if (selectedSubcategory) {
       filtered = filtered.filter((product: Product) =>
@@ -112,35 +118,41 @@ const POS: React.FC = () => {
   };
 
   const handleCheckout = async (paymentMethod: string) => {
-  // VALIDACIONES ROBUSTAS
-  if (!state.items || state.items.length === 0) {
-    setSuccessMsg('No hay productos en el carrito.');
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-    return;
-  }
-  if (!paymentMethod) {
-    setSuccessMsg('Selecciona un método de pago.');
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-    return;
-  }
-  // Validar stock suficiente para cada producto (incluyendo ventas por peso)
-  const productosSinStock = state.items.filter((item: CartItem) => {
-    // Venta por peso: permitir decimales
-    if (item.product.ventaPorPeso && item.product.unitType === 'kg') {
-      return item.quantity > item.product.stock;
+    // VALIDACIONES ROBUSTAS
+    if (!state.items || state.items.length === 0) {
+      setSuccessMsg('No hay productos en el carrito.');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      return;
     }
-    // Venta por unidad: solo enteros
-    return item.quantity > item.product.stock;
-  });
-  if (productosSinStock.length > 0) {
-    const nombres = productosSinStock.map(i => i.product.name).join(', ');
-    setSuccessMsg(`Stock insuficiente para: ${nombres}`);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 4000);
-    return;
-  }
+    if (!paymentMethod) {
+      setSuccessMsg('Selecciona un método de pago.');
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+      return;
+    }
+    // Validar stock suficiente para cada producto (incluyendo ventas por peso)
+    const productosSinStock = state.items.filter((item: CartItem) => {
+      // Venta por peso: permitir decimales
+      if (item.product.ventaPorPeso && item.product.unitType === 'kg') {
+        return item.quantity > item.product.stock;
+      }
+      // Venta por unidad: solo enteros
+      return item.quantity > item.product.stock;
+    });
+    if (productosSinStock.length > 0) {
+      const nombres = productosSinStock.map(i => i.product.name).join(', ');
+      setSuccessMsg(`Stock insuficiente para: ${nombres}`);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 4000);
+      return;
+    }
+    if (!tenant?.id) {
+      setSuccessMsg('Error: No se identificó la tienda.');
+      setShowSuccess(true);
+      return;
+    }
+
     try {
       // Obtener items del carrito y datos de usuario/empresa
       const cartItems = state.items;
@@ -148,39 +160,39 @@ const POS: React.FC = () => {
       // Obtener último número de boleta de ventas existentes (simple: contar ventas + 1)
       let receiptNumber = '';
       try {
-        const ventasSnapshot = await import("../../lib/firestoreSales").then(m => m.obtenerVentas());
+        const ventasSnapshot = await obtenerVentas(tenant.id);
         receiptNumber = (ventasSnapshot.length + 1).toString().padStart(6, '0');
       } catch {
         receiptNumber = (Math.floor(Math.random() * 900000) + 100000).toString();
       }
       // Asegurar que cada producto vendido tenga los campos isExonerated e igvIncluded
-    const venta = {
-      id: receiptNumber,
-      items: cartItems.map((item: { product: Product; quantity: number }) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        quantity: item.quantity,
-        unitPrice: item.product.salePrice ?? 0,
-        total: (item.product.salePrice ?? 0) * item.quantity
-      })),
+      const venta = {
+        id: receiptNumber,
+        items: cartItems.map((item: { product: Product; quantity: number }) => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity,
+          unitPrice: item.product.salePrice ?? 0,
+          total: (item.product.salePrice ?? 0) * item.quantity
+        })),
 
-      total: state.total,
-      subtotal: state.subtotal ?? 0,
-      discount: state.discount ?? 0,
-      tax: state.tax ?? 0,
-      paymentMethod,
-      customerId: '', // Por ahora vacío
-      customerName: '', // Futuro: seleccionar cliente
-      createdAt: new Date(),
-      cashierId: user?.uid || '',
-      cashierName: user?.displayName || user?.email || '',
-      receiptNumber,
-    };
-    // Generar un id único para la venta (por ejemplo, usando receiptNumber)
-    venta.id = receiptNumber;
-    await crearVenta(venta);
-    // Descontar stock usando los items de la venta
-    await descontarStockProductos(venta.items);
+        total: state.total,
+        subtotal: state.subtotal ?? 0,
+        discount: state.discount ?? 0,
+        tax: state.tax ?? 0,
+        paymentMethod,
+        customerId: '', // Por ahora vacío
+        customerName: '', // Futuro: seleccionar cliente
+        createdAt: new Date(),
+        cashierId: user?.id || '',
+        cashierName: user?.user_metadata?.full_name || user?.email || '',
+        receiptNumber,
+      };
+      // Generar un id único para la venta (por ejemplo, usando receiptNumber)
+      venta.id = receiptNumber;
+      await crearVenta(venta, tenant.id);
+      // Descontar stock usando los items de la venta
+      await descontarStockProductos(venta.items, tenant.id);
       setSuccessMsg(`¡Venta procesada exitosamente con ${paymentMethod === 'cash' ? 'efectivo' : paymentMethod === 'card' ? 'tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : paymentMethod}!`);
       setShowSuccess(true);
       setVentaTicket({
@@ -199,160 +211,113 @@ const POS: React.FC = () => {
       setTimeout(() => setShowSuccess(false), 3000);
       clearCart();
     } catch (error: unknown) {
-    let msg = 'Error al procesar la venta';
-    if (typeof error === 'object' && error !== null) {
-      const err = error as { message?: string; code?: string };
-      if (typeof err.message === 'string') {
-        msg += `: ${err.message}`;
+      let msg = 'Error al procesar la venta';
+      if (typeof error === 'object' && error !== null) {
+        const err = error as { message?: string; code?: string };
+        if (typeof err.message === 'string') {
+          msg += `: ${err.message}`;
+        }
+        if (typeof err.code === 'string') {
+          msg += ` (code: ${err.code})`;
+        }
       }
-      if (typeof err.code === 'string') {
-        msg += ` (code: ${err.code})`;
-      }
-    }
-    console.error('Error al procesar la venta:', error);
-    setSuccessMsg(msg);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3500);
+      console.error('Error al procesar la venta:', error);
+      setSuccessMsg(msg);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3500);
     }
   };
 
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-        <h1 className="text-3xl font-bold text-gray-800">Punto de Venta</h1>
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Punto de Venta</h1>
         <ProductSearch onSearch={handleSearch} onBarcodeSearch={handleBarcodeSearch} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Products Section */}
         <div className="xl:col-span-3 space-y-6">
-          
-          {/* Filtro dinámico de Categorías/Subcategorías */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 py-2">
-            {selectedCategory === null ? (
-              <>
-                {/* Botón Ver Todo como primer botón, igual tamaño que los de categoría */}
+
+          {/* Modern Category/Subcategory Filter Bar */}
+          <div className="flex flex-col gap-4 py-2">
+
+            {/* Categories Level - Flexible Wrapping Grid */}
+            <div className="flex flex-wrap items-center gap-3 pb-4 px-1">
+              {/* All / Back Button */}
+              {selectedCategory !== null ? (
                 <button
                   onClick={() => {
                     setSelectedCategory(null);
                     setSelectedSubcategory(null);
                   }}
-                  className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl font-semibold transition-colors text-base border-2 ${selectedCategory === null ? 'border-emerald-500 ring-2 ring-emerald-400 shadow-lg bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-white text-gray-800 hover:border-emerald-300'} duration-100`}
-                  style={{ minWidth: 70, minHeight: 60 }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold transition-all border-2 border-red-100 bg-red-50 text-red-600 hover:bg-red-100 active:scale-95 shrink-0"
+                >
+                  <span className="text-lg">←</span>
+                  <span className="text-sm">Categorías</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSelectedSubcategory(null);
+                  }}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedCategory === null
+                    ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                    : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 hover:border-emerald-200'
+                    }`}
                 >
                   <CategoryBadge category="all" />
                 </button>
-                {categoryList.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setSelectedSubcategory(null);
-                    }}
-                    className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl font-semibold transition-colors text-base border-2 ${selectedCategory === cat ? 'border-emerald-500 ring-2 ring-emerald-400 shadow-lg bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-white text-gray-800 hover:border-emerald-300'} duration-100`}
-                    style={{ minWidth: 70, minHeight: 60 }}
-                  >
-                    <CategoryBadge category={cat} />
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                {/* Botón Volver como primer botón */}
+              )}
+
+              {selectedCategory === null && categoryList.map((cat) => (
                 <button
+                  key={cat}
                   onClick={() => {
-                    setSelectedCategory(null);
+                    setSelectedCategory(cat);
                     setSelectedSubcategory(null);
                   }}
-                  className="flex flex-row items-center justify-center gap-1 px-2 py-2 rounded-xl border-2 h-8 min-h-8 w-full text-xs font-medium border-red-300 bg-red-50 text-red-700 hover:border-red-400 duration-100"
-                  style={{ minWidth: 70, minHeight: 60 }}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedCategory === cat
+                    ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                    : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:border-emerald-200'
+                    }`}
                 >
-                  <span style={{ fontSize: 18, lineHeight: 1.2 }} role="img" aria-label="volver">←</span>
-                  <span>Volver</span>
+                  <CategoryBadge category={cat} />
                 </button>
-                {(categoryData[selectedCategory as CategoryKey]?.subcategories || []).map((subcat) => {
-  // Iconos representativos por subcategoría
-  const iconMap: Record<string, string> = {
-    // Abarrotes
-    'menestras': '🫘',
-    'pastas': '🍝',
-    'arroz': '🍚',
-    'salsas': '🥫',
-    'aceites': '🛢️',
-    'condimentos': '🧂',
-    'conservas': '🥫',
-    'otro': '📦',
-    // Huevos y Lácteos
-    'huevos': '🥚',
-    'leche': '🥛',
-    'yogur': '🥣',
-    'queso': '🧀',
-    'mantequilla': '🧈',
-    'otros': '📦',
-    // Carnes y Embutidos
-    'pollo': '🍗',
-    'res': '🥩',
-    'salchichas': '🌭',
-    'jamón': '🍖',
-    // Frutas y Verduras
-    'frutas': '🍎',
-    'verduras': '🥦',
-    'tubérculos': '🥔',
-    // Bebidas
-    'gaseosas': '🥤',
-    'jugos': '🧃',
-    'aguas': '💧',
-    'energéticas': '⚡',
-    // Snacks y Golosinas
-    'chocolates': '🍫',
-    'papas': '🍟',
-    'galletas': '🍪',
-    'caramelos': '🍬',
-    // Helados
-    'cremoladas': '🍧',
-    'paletas': '🍡',
-    'conos': '🍦',
-    // Limpieza del Hogar
-    'lavavajillas': '🧽',
-    'detergentes': '🧴',
-    'multiusos': '🧹',
-    // Higiene Personal
-    'jabones': '🧼',
-    'shampoo': '🧴',
-    'desodorantes': '🧴',
-    'papel higiénico': '🧻',
-    // Mascotas
-    'alimento perro': '🐶',
-    'alimento gato': '🐱',
-    'accesorios': '🎾',
-    // Descartables
-    'vasos': '🥤',
-    'platos': '🍽️',
-    'cubiertos': '🍴',
-    'bolsas': '🛍️',
-    // Panadería
-    'pan': '🥖',
-    'pan especial': '🥯',
-    // Repostería, Congelados, etc. puedes agregar más aquí
-  };
-  const normalized = subcat.trim().toLowerCase();
-  const emoji = iconMap[normalized] || '🍽️';
-  <span style={{ fontSize: 32, lineHeight: 1.2 }} role="img" aria-label={normalized}>{emoji}</span>;
-  return (
-    <button
-      key={subcat}
-      onClick={() => setSelectedSubcategory(subcat)}
-      className={`flex flex-row items-center justify-center gap-1 px-2 py-2 rounded-xl transition-colors border-2 h-8 min-h-8 w-full text-xs font-medium ${
-        selectedSubcategory === subcat ? 'border-emerald-500 ring-2 ring-emerald-400 shadow-lg bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-white text-gray-800 hover:border-emerald-300'} duration-100`}
-      style={{ minWidth: 70, minHeight: 60 }}
-    >
-      <span style={{ fontSize: 18, lineHeight: 1.2 }} role="img" aria-label={normalized}>{emoji}</span>
-      <span className="text-xs">{subcat}</span>
-    </button>
-  );
-})}
-              </>
-            )}
+              ))}
+
+              {/* Subcategories (Visible only when a category is selected) */}
+              {selectedCategory !== null && (categoryData[selectedCategory as CategoryKey]?.subcategories || []).map((subcat) => {
+                const iconMap: Record<string, string> = {
+                  'menestras': '🫘', 'pastas': '🍝', 'arroz': '🍚', 'salsas': '🥫', 'aceites': '🛢️',
+                  'condimentos': '🧂', 'conservas': '🥫', 'otro': '📦', 'huevos': '🥚', 'leche': '🥛',
+                  'yogur': '🥣', 'queso': '🧀', 'mantequilla': '🧈', 'otros': '📦', 'pollo': '🍗',
+                  'res': '🥩', 'salchichas': '🌭', 'jamón': '🍖', 'frutas': '🍎', 'verduras': '🥦',
+                  'tubérculos': '🥔', 'gaseosas': '🥤', 'jugos': '🧃', 'aguas': '💧', 'energéticas': '⚡',
+                  'chocolates': '🍫', 'papas': '🍟', 'galletas': '🍪', 'caramelos': '🍬',
+                  'cremoladas': '🍧', 'paletas': '🍡', 'conos': '🍦', 'lavavajillas': '🧽',
+                  'detergentes': '🧴', 'multiusos': '🧹', 'jabones': '🧼', 'shampoo': '🧴',
+                  'desodorantes': '🧴', 'papel higiénico': '🧻', 'alimento perro': '🐶',
+                  'alimento gato': '🐱', 'accesorios': '🎾', 'vasos': '🥤', 'platos': '🍽️',
+                  'cubiertos': '🍴', 'bolsas': '🛍️', 'pan': '🥖', 'pan especial': '🥯',
+                };
+                const emoji = iconMap[subcat.trim().toLowerCase()] || '🍽️';
+                return (
+                  <button
+                    key={subcat}
+                    onClick={() => setSelectedSubcategory(subcat)}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedSubcategory === subcat
+                      ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg'
+                      : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:border-emerald-200'
+                      }`}
+                  >
+                    <span className="text-xl leading-none">{emoji}</span>
+                    <span className="text-sm capitalize">{subcat}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Products Grid */}
@@ -369,11 +334,10 @@ const POS: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => setCurrentPage(index + 1)}
-                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                      currentPage === index + 1
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
+                    className={`px-3 py-1 rounded-lg font-medium transition-colors ${currentPage === index + 1
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
                   >
                     {index + 1}
                   </button>
@@ -393,36 +357,36 @@ const POS: React.FC = () => {
       )}
       {/* Modal de ticket/boleta tras venta exitosa */}
       {showTicket && ventaTicket && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl flex flex-col items-center">
-      <TicketVenta ref={ticketRef} venta={ventaTicket} />
-      <div className="flex justify-center gap-4 mt-8 w-full">
-        <button
-          className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-400 font-semibold transition-all duration-150"
-          title="Imprimir ticket (Ctrl+P)"
-          onClick={async () => {
-            try {
-              await handlePrint?.();
-            } catch (e) {
-              alert('No se pudo abrir el diálogo de impresión. Verifica permisos del navegador o prueba otro navegador.');
-            }
-          }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7m-6 13v-4m0 4H6a2 2 0 01-2-2v-5a2 2 0 012-2h12a2 2 0 012 2v5a2 2 0 01-2 2h-6z" /></svg>
-          Imprimir ticket
-        </button>
-        <button
-          className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 font-semibold transition-all duration-150 border border-gray-300"
-          title="Cerrar ticket"
-          onClick={() => setShowTicket(false)}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          Cancelar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl flex flex-col items-center">
+            <TicketVenta ref={ticketRef} venta={ventaTicket} />
+            <div className="flex justify-center gap-4 mt-8 w-full">
+              <button
+                className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-400 font-semibold transition-all duration-150"
+                title="Imprimir ticket (Ctrl+P)"
+                onClick={async () => {
+                  try {
+                    await handlePrint?.();
+                  } catch {
+                    alert('No se pudo abrir el diálogo de impresión. Verifica permisos del navegador o prueba otro navegador.');
+                  }
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7m-6 13v-4m0 4H6a2 2 0 01-2-2v-5a2 2 0 012-2h12a2 2 0 012 2v5a2 2 0 01-2 2h-6z" /></svg>
+                Imprimir ticket
+              </button>
+              <button
+                className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 font-semibold transition-all duration-150 border border-gray-300"
+                title="Cerrar ticket"
+                onClick={() => setShowTicket(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

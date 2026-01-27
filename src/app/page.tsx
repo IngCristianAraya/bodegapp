@@ -23,9 +23,9 @@ export default function Home() {
     );
   }
 
-  if (!user) {
-    return <LoginForm />;
-  }
+  // if (!user) {
+  //   return <LoginForm />;
+  // }
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -50,8 +50,9 @@ export default function Home() {
 
   return (
     <>
-      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={() => {}} />
-      <div className="flex-1 overflow-auto min-h-screen bg-gray-50 pt-16">{renderCurrentPage()}</div>
+      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={() => { }} />
+      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={() => { }} />
+      <div className="flex-1 overflow-auto min-h-screen pt-28 px-6 pb-6 animate-in fade-in duration-500">{renderCurrentPage()}</div>
     </>
   );
 }

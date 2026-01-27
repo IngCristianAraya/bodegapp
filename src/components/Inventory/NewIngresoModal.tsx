@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 
+export interface IngresoData {
+  quantity: number;
+  unitCost: number;
+  date: string; // Siempre usar string en formato ISO
+}
+
 interface NewIngresoModalProps {
-  productName: string;
-  onConfirm: (quantity: number, costPrice: number) => void;
-  onCancel: () => void;
+  isOpen: boolean;
+  product: { name: string };
+  onSave: (ingresoData: IngresoData) => Promise<void>;
+  onClose: () => void;
   loading?: boolean;
 }
 
-const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ productName, onConfirm, onCancel, loading }) => {
+const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ isOpen, product, onSave, onClose, loading }) => {
   const [quantity, setQuantity] = useState<number>(0);
   const [costPrice, setCostPrice] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,20 +32,28 @@ const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ productName, onConfir
       setError('El precio de costo no puede ser negativo.');
       return;
     }
-    onConfirm(quantity, costPrice);
+    onSave({
+      quantity,
+      unitCost: costPrice,
+      date: new Date().toISOString() // Asegurar que sea string ISO
+    });
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
-        <h2 className="text-xl font-bold mb-4 text-emerald-700">Nuevo ingreso de producto</h2>
-        <div className="mb-2"><span className="font-semibold">Producto:</span> {productName}</div>
-        <form onSubmit={handleSubmit}>
-          <div className="flex flex-col mb-2">
-            <label className="text-xs font-semibold mb-1">Cantidad a ingresar</label>
+    <div className={`fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200 ${!isOpen ? 'hidden' : ''}`}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-800 transform transition-all">
+        <h2 className="text-xl font-bold mb-4 text-emerald-700 dark:text-emerald-400">Nuevo ingreso de producto</h2>
+        <div className="mb-4 text-gray-700 dark:text-gray-300">
+          <span className="font-extrabold text-sm uppercase tracking-tight">Producto:</span>
+          <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{product.name}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Cantidad a ingresar</label>
             <input
               type="number"
-              className="border rounded px-3 py-1"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               min={1}
               value={quantity}
               onChange={e => setQuantity(Number(e.target.value))}
@@ -44,11 +61,12 @@ const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ productName, onConfir
               required
             />
           </div>
-          <div className="flex flex-col mb-2">
-            <label className="text-xs font-semibold mb-1">Precio de costo (unidad)</label>
+
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">Precio de costo (unidad)</label>
             <input
               type="number"
-              className="border rounded px-3 py-1"
+              className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               min={0}
               step={0.01}
               value={costPrice}
@@ -57,19 +75,25 @@ const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ productName, onConfir
               required
             />
           </div>
-          {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
-          <div className="flex justify-end gap-2 mt-4">
+
+          {error && <div className="text-red-500 text-xs font-bold uppercase py-1">{error}</div>}
+
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
-              className="px-4 py-2 bg-gray-200 rounded"
-              onClick={onCancel}
+              className="px-6 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold transition-all hover:bg-gray-200 dark:hover:bg-slate-700"
+              onClick={onClose}
               disabled={loading}
-            >Cancelar</button>
+            >
+              Cancelar
+            </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-600 text-white rounded"
+              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 dark:shadow-none transition-all active:scale-95 disabled:bg-emerald-400"
               disabled={loading}
-            >{loading ? 'Guardando...' : 'Confirmar ingreso'}</button>
+            >
+              {loading ? 'Guardando...' : 'Confirmar ingreso'}
+            </button>
           </div>
         </form>
       </div>
@@ -77,4 +101,4 @@ const NewIngresoModal: React.FC<NewIngresoModalProps> = ({ productName, onConfir
   );
 };
 
-export default NewIngresoModal;
+export default NewIngresoModal as React.FC<NewIngresoModalProps>;

@@ -23,13 +23,13 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   proveedores = [],
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm mb-6 border border-transparent dark:border-gray-700">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
           <input
             type="text"
-            className="w-full border rounded-md px-3 py-2"
+            className="w-full border dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400"
             placeholder="Buscar por nombre"
             value={filters.name}
             onChange={e => onFiltersChange({ ...filters, name: e.target.value })}
@@ -37,10 +37,10 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Código/SKU</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código/SKU</label>
           <input
             type="text"
-            className="w-full border rounded-md px-3 py-2"
+            className="w-full border dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400"
             placeholder="Código o SKU"
             value={filters.code}
             onChange={e => onFiltersChange({ ...filters, code: e.target.value })}
@@ -48,12 +48,12 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
           {proveedores && proveedores.length > 0 ? (
             <>
               <input
                 type="text"
-                className="w-full border rounded-md px-3 py-2"
+                className="w-full border dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400"
                 placeholder="Filtrar por proveedor"
                 value={filters.supplier}
                 onChange={e => onFiltersChange({ ...filters, supplier: e.target.value })}
@@ -69,7 +69,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           ) : (
             <input
               type="text"
-              className="w-full border rounded-md px-3 py-2"
+              className="w-full border dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400"
               placeholder="Filtrar por proveedor"
               value={filters.supplier}
               onChange={e => onFiltersChange({ ...filters, supplier: e.target.value })}
@@ -78,9 +78,9 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Categoría</label>
           <select
-            className="w-full border rounded-md px-3 py-2"
+            className="w-full border dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400"
             value={filters.category}
             onChange={e => onFiltersChange({ ...filters, category: e.target.value })}
             aria-label="Filtrar por categoría"
@@ -104,10 +104,10 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
         </div>
       </div>
       <div className="flex justify-between items-center">
-        <div className="flex items-center">
+        <div className="flex items-center w-full md:w-auto">
           <input
             type="text"
-            className="border rounded-l-md px-3 py-2"
+            className="border dark:border-gray-600 rounded-l-md px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-emerald-500 dark:focus:border-emerald-400 flex-1 md:flex-none"
             placeholder="Escanear código de barras"
             value={barcodeInput}
             onChange={e => onBarcodeInputChange(e.target.value)}
@@ -115,7 +115,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
             aria-label="Buscar por código de barras"
           />
           <button
-            className="bg-emerald-600 text-white px-3 py-2 rounded-r-md"
+            className="bg-emerald-600 text-white px-3 py-2 rounded-r-md hover:bg-emerald-700 transition-colors"
             onClick={onBarcodeSearch}
             type="button"
             aria-label="Buscar código de barras"

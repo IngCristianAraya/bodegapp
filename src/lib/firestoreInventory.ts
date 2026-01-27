@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, Timestamp, doc, updateDoc, DocumentData, QuerySnapshot } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp, doc, updateDoc, DocumentData, QuerySnapshot, DocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { Product, InventoryMovement } from '../types/inventory';
 
@@ -126,69 +126,119 @@ export async function obtenerTodosMovimientosInventario(): Promise<InventoryMove
   const snapshot = await getDocs(collection(db, MOVEMENTS_COLLECTION));
   // Obtener productos para enriquecer el reporte
   const productosSnap = await getDocs(collection(db, PRODUCTS_COLLECTION));
-  const productos: Product[] = productosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-  // Agrupar movimientos por producto
+  const productos: Product[] = productosSnap.docs.map((doc: DocumentData) => ({
+    id: doc.id,
+    ...doc.data()
+  } as Product));
+  
+  // Type for date fields that can come in different formats from Firestore
+  type FirestoreDate = string | { toDate: () => Date } | Date | null | undefined;
+  
+  // Raw movement type from Firestore
   type RawMovement = {
     id: string;
     productId: string;
     quantity: number;
     costPrice: number;
-    date: string | { toDate: () => Date } | Date;
+    date: FirestoreDate;
     type?: string;
     cashierEmail?: string;
     motivo?: string;
   };
+  // Helper function to safely convert Firestore date to timestamp
+  const getDateValue = (date: FirestoreDate): number => {
+    if (!date) return 0;
+    
+    if (typeof date === 'object' && date !== null) {
+      if ('toDate' in date && typeof date.toDate === 'function') {
+        return date.toDate().getTime();
+      }
+      if (date instanceof Date) {
+        return date.getTime();
+      }
+    }
+    
+    if (typeof date === 'string') {
+      return new Date(date).getTime();
+    }
+    
+    return 0;
+  };
+  
+  // Helper function to convert Firestore date to ISO string
+  const dateToISOString = (date: FirestoreDate): string | null => {
+    if (!date) return null;
+    
+    if (typeof date === 'object' && date !== null) {
+      if ('toDate' in date && typeof date.toDate === 'function') {
+        return date.toDate().toISOString();
+      }
+      if (date instanceof Date) {
+        return date.toISOString();
+      }
+    }
+    
+    if (typeof date === 'string') {
+      return new Date(date).toISOString();
+    }
+    
+    return null;
+  };
+  
+  // Group movements by product
   const movimientosPorProducto: Record<string, RawMovement[]> = {};
-  snapshot.docs.forEach(doc => {
+  
+  snapshot.docs.forEach((doc: DocumentSnapshot<DocumentData>) => {
     const mov = { id: doc.id, ...doc.data() } as RawMovement;
-    if (!movimientosPorProducto[mov.productId]) movimientosPorProducto[mov.productId] = [];
+    if (!mov.productId) return; // Skip if no productId
+    
+    if (!movimientosPorProducto[mov.productId]) {
+      movimientosPorProducto[mov.productId] = [];
+    }
     movimientosPorProducto[mov.productId].push(mov);
   });
-  // Para cada producto, ordenar movimientos por fecha ASC y calcular stock acumulado
+  
+  // For each product, sort movements by date ASC and calculate accumulated stock
   const movimientosEnriquecidos: InventoryMovement[] = [];
-  Object.entries(movimientosPorProducto).forEach(([, movimientos]) => {
-    // Ordenar por fecha ASC
-    // Función robusta para obtener el valor numérico de la fecha
-    const getDateValue = (date: string | { toDate: () => Date } | Date) => {
-      if (typeof date === 'object' && date !== null && 'toDate' in date && typeof (date as any).toDate === 'function') return (date as { toDate: () => Date }).toDate().getTime();
-      if (typeof date === 'string') return new Date(date).getTime();
-      if (date instanceof Date) return date.getTime();
-      return 0;
-    };
+  
+  Object.values(movimientosPorProducto).forEach((movimientos) => {
+    // Sort by date ASC
     movimientos.sort((a, b) => {
       const dateA = getDateValue(a.date);
       const dateB = getDateValue(b.date);
       return dateA - dateB;
     });
+    
+    // Calculate stock for each movement
     let stock = 0;
-    for (let i = 0; i < movimientos.length; i++) {
-      const mov = movimientos[i];
+    
+    for (const mov of movimientos) {
       const initialStock = stock;
-      stock += mov.quantity;
+      stock += typeof mov.quantity === 'number' ? mov.quantity : 0;
       const finalStock = stock;
-      const prod = productos.find((p) => p.id === mov.productId);
+      
+      const product = productos.find((p) => p.id === mov.productId);
+      
       movimientosEnriquecidos.push({
         id: mov.id,
         productId: mov.productId || '',
         quantity: typeof mov.quantity === 'number' ? mov.quantity : 0,
         costPrice: typeof mov.costPrice === 'number' ? mov.costPrice : 0,
-        date: typeof mov.date === 'string' ? mov.date : (typeof (mov.date as any)?.toDate === 'function' ? (mov.date as any).toDate().toISOString() : null),
-        type: mov.type as InventoryMovement['type'] || 'ingreso',
+        date: dateToISOString(mov.date) || new Date().toISOString(),
+        type: (mov.type as InventoryMovement['type']) || 'ingreso',
         cashierEmail: mov.cashierEmail || '',
-        motivo: mov.motivo || undefined,
-        productName: prod && prod.name ? prod.name : mov.productId || '',
+        motivo: mov.motivo,
+        productName: product?.name || mov.productId || '',
         initialStock,
         finalStock
       });
     }
   });
-  // Ordenar todos los movimientos enriquecidos por fecha descendente
-  const getDateValue = (date: string | { toDate: () => Date } | Date) => {
-    if (typeof date === 'object' && date !== null && 'toDate' in date && typeof (date as any).toDate === 'function') return (date as { toDate: () => Date }).toDate().getTime();
-    if (typeof date === 'string') return new Date(date).getTime();
-    if (date instanceof Date) return date.getTime();
-    return 0;
-  };
+  
+  // Sort all enriched movements by date DESC
+  movimientosEnriquecidos.sort((a, b) => {
+    return getDateValue(b.date) - getDateValue(a.date);
+  });
   return movimientosEnriquecidos.sort((a, b) => {
     const dateA = getDateValue(a.date);
     const dateB = getDateValue(b.date);

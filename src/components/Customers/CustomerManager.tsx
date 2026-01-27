@@ -76,9 +76,8 @@ const CustomerManager: React.FC = () => {
       setClientes(clientes.filter(c => c.id !== id));
       setSuccess('Cliente eliminado correctamente');
     } catch (error) {
+      console.error('Error al eliminar cliente:', error);
       setSuccess('Error al eliminar cliente');
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, CreditCard } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, CreditCard, X, ChevronRight } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
-
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CartProps {
@@ -14,7 +13,6 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [discountInput, setDiscountInput] = useState(state.discount > 0 ? state.discount.toString() : '');
 
-  // Sincronizar input si cambia el descuento externo
   React.useEffect(() => {
     setDiscountInput(state.discount > 0 ? state.discount.toString() : '');
   }, [state.discount]);
@@ -31,10 +29,10 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
   };
 
   const paymentMethods = [
-    { id: 'cash', name: 'Efectivo', icon: '💵' },
-    { id: 'card', name: 'Tarjeta', icon: '💳' },
-    { id: 'yape', name: 'Yape', icon: '📱' },
-    { id: 'plin', name: 'Plin', icon: '📲' }
+    { id: 'cash', name: 'Efectivo', icon: '💵', color: 'bg-green-100 text-green-700 border-green-200' },
+    { id: 'card', name: 'Tarjeta', icon: '💳', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { id: 'yape', name: 'Yape', icon: '📱', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+    { id: 'plin', name: 'Plin', icon: '📲', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' }
   ];
 
   const handlePayment = (method: string) => {
@@ -42,217 +40,186 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
     setShowPaymentMethods(false);
     setTimeout(() => {
       onCheckout(method);
-    }, 250); // Pequeña pausa para UX
+    }, 250);
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 w-full max-w-lg mx-auto md:mx-0 md:max-w-full md:p-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 sm:mb-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex items-center">
-          <ShoppingCart className="mr-2" size={24} />
-          Carrito
+    <div className="glass-card rounded-2xl shadow-lg border border-white/40 dark:border-gray-700 flex flex-col h-[calc(100vh-140px)] sticky top-24 bg-white/90 dark:bg-slate-900">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-100/50 dark:border-gray-700 flex items-center justify-between bg-white/30 dark:bg-slate-800/30 backdrop-blur-sm rounded-t-2xl">
+        <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+          <div className="bg-emerald-100 dark:bg-emerald-900/50 p-2 rounded-lg mr-3 text-emerald-600 dark:text-emerald-400">
+            <ShoppingCart size={20} />
+          </div>
+          Carrito de Compra
         </h2>
-        <span className="bg-emerald-100 text-emerald-800 text-xs sm:text-sm font-medium px-2.5 py-1 rounded-full">
+        <span className="bg-gray-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
           {state.items.length} items
         </span>
       </div>
 
-      {state.items.length === 0 ? (
-        <div className="text-center py-12">
-          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">El carrito está vacío</p>
-          <p className="text-sm text-gray-400">Agrega productos para comenzar</p>
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6 max-h-80 sm:max-h-96 overflow-y-auto">
-            <AnimatePresence initial={false}>
-              {state.items.map((item) => (
-                <motion.div
-                  key={item.product.id}
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  transition={{ duration: 0.22 }}
-                  layout
-                  className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 p-3 sm:p-4 border border-gray-200 rounded-lg bg-white shadow-sm"
-                >
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900">{item.product.name}</h3>
-                    <p className="text-sm text-gray-600">S/. {(item.product.salePrice ?? 0).toFixed(2)} / {item.product.unit}</p>
-                  </div>
-                  <div className="flex items-center space-x-1 sm:space-x-2 mt-2 sm:mt-0">
-                    <button
-                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <span className="w-8 text-center font-medium text-base sm:text-lg">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      className="p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                  <div className="text-right mt-2 sm:mt-0">
-                    <p className="font-semibold text-gray-900">
-                      S/. {((item.product.salePrice ?? 0) * item.quantity).toFixed(2)}
-                    </p>
-                    <button
-                      onClick={() => removeItem(item.product.id)}
-                      className="text-red-500 hover:text-red-700 transition-colors active:scale-95"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+      {/* Items List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        {state.items.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
+            <div className="bg-gray-50 dark:bg-slate-800 p-6 rounded-full mb-4">
+              <ShoppingCart className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+            </div>
+            <p className="font-medium text-gray-500 dark:text-gray-400">Tu carrito está vacío</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Agrega productos del inventario</p>
           </div>
-
-          <div className="border-t border-gray-200 pt-4 sm:pt-6">
-            <div className="space-y-3">
-              {/* Campo de descuento global */}
-              <div className="flex justify-between items-center text-sm mb-1">
-                <span className="text-green-700 font-medium flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M7 7h.01M7 17h.01M17 7h.01M17 17h.01" /></svg>
-                  Descuento
-                </span>
-                <div className="flex flex-col items-end">
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    className={`w-24 px-2 py-1 border rounded text-right focus:outline-none focus:ring focus:border-emerald-400 ${parseFloat(discountInput) > state.subtotal + state.tax ? 'border-red-400 bg-red-50 text-red-700' : ''}`}
-                    placeholder="S/. 0.00"
-                    value={discountInput}
-                    onChange={handleDiscountChange}
-                    onBlur={() => setDiscountInput(state.discount > 0 ? state.discount.toString() : '')}
-                  />
-                  <span className="text-xs text-gray-400 mt-0.5">Máx: S/. {(state.subtotal + state.tax).toFixed(2)}</span>
-                  {parseFloat(discountInput) > state.subtotal + state.tax && (
-                    <span className="text-xs text-red-500">El descuento no puede superar el total.</span>
-                  )}
-                </div>
-              </div>
-              {/* Cálculo de subtotales y IGV */}
-              {(() => {
-                function descomponerIGV(precioFinal: number) {
-                  const base = precioFinal / 1.18;
-                  const igv = precioFinal - base;
-                  return { base, igv };
-                }
-                const subtotalExempt = state.items.filter(item => item.product.isExonerated || item.product.isExemptIGV || item.product.igvIncluded === false).reduce((sum, item) => sum + ((item.product.salePrice ?? 0) * item.quantity), 0);
-                const subtotalTaxed = state.items.filter(item => !item.product.isExonerated && item.product.igvIncluded !== false).reduce((sum, item) => {
-                  const { base } = descomponerIGV(item.product.salePrice ?? 0);
-                  return sum + (base * item.quantity);
-                }, 0);
-                const igvTotal = state.items.filter(item => !item.product.isExonerated && item.product.igvIncluded !== false).reduce((sum, item) => {
-                  const { igv } = descomponerIGV(item.product.salePrice ?? 0);
-                  return sum + (igv * item.quantity);
-                }, 0);
-                return (
-                  <div className="grid grid-cols-1 gap-1 my-2">
-                    <div className="flex items-center justify-between px-2 py-1 rounded bg-blue-50">
-                      <span className="flex items-center gap-1 text-blue-700"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" /></svg>Subtotal Gravado</span>
-                      <span className="font-semibold text-blue-900">S/. {subtotalTaxed.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between px-2 py-1 rounded bg-teal-50">
-                      <span className="flex items-center gap-1 text-teal-700"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 4h6a2 2 0 002-2v-5a2 2 0 00-2-2h-6a2 2 0 00-2 2v5a2 2 0 002 2z" /></svg>Subtotal Exonerado</span>
-                      <span className="font-semibold text-teal-900">S/. {subtotalExempt.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between px-2 py-1 rounded bg-yellow-50">
-                      <span className="flex items-center gap-1 text-yellow-700"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 8v4m0 4h.01" /></svg>IGV (18%)</span>
-                      <span className="font-semibold text-yellow-900">S/. {igvTotal.toFixed(2)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {state.discount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-600">Descuento</span>
-                  <span className="font-medium text-green-600">- S/. {(state.discount ?? 0).toFixed(2)}</span>
-                </div>
-              )}
+        ) : (
+          <AnimatePresence>
+            {state.items.map((item) => (
               <motion.div
-                key={state.discount}
-                initial={{ scale: 1, backgroundColor: '#fff' }}
-                animate={state.discount > 0 ? { scale: 1.04, backgroundColor: '#d1fae5' } : { scale: 1, backgroundColor: '#fff' }}
-                transition={{ duration: 0.4 }}
-                className={`flex justify-between text-lg font-bold border-t pt-3 ${state.discount > 0 ? 'text-emerald-700' : ''}`}
+                key={item.product.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                layout
+                className="group flex items-center gap-3 p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-slate-600 shadow-sm transition-all"
               >
-                <span>Total</span>
-                <span>
-                  S/. {(state.total ?? 0).toFixed(2)}
-                  {state.discount > 0 && <span className="ml-2 text-xs text-green-600 font-medium">(con descuento)</span>}
-                </span>
-              </motion.div>
-            </div>
-
-            <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-              <button
-                onClick={() => setShowPaymentMethods(true)}
-                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors flex items-center justify-center text-base sm:text-lg active:scale-95"
-              >
-                <CreditCard className="mr-2" size={20} />
-                Procesar Pago
-              </button>
-              {selectedPaymentMethod && (
-                <div className="flex items-center justify-center mt-2 gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2">
-                  <span className="text-2xl">
-                    {paymentMethods.find(m => m.id === selectedPaymentMethod)?.icon}
-                  </span>
-                  <span className="font-medium text-emerald-800">
-                    {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name}
-                  </span>
+                {/* Image thumb if available, else letter */}
+                <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 text-gray-400 dark:text-gray-300 font-bold text-lg overflow-hidden relative">
+                  {item.product.imageUrl ? (
+                    <img src={item.product.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : item.product.name.charAt(0)}
                 </div>
-              )}
-              <button
-                onClick={clearCart}
-                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-base sm:text-lg active:scale-95"
-              >
-                Limpiar Carrito
-              </button>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm truncate">{item.product.name}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">S/. {item.product.salePrice} x {item.product.unit}</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-900 rounded-lg p-1">
+                  <button
+                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                    className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="text-xs font-bold w-4 text-center text-gray-800 dark:text-white">{item.quantity}</span>
+                  <button
+                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                    className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">S/. {((item.product.salePrice ?? 0) * item.quantity).toFixed(2)}</p>
+                </div>
+
+                <button
+                  onClick={() => removeItem(item.product.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* Footer / Checkout */}
+      <div className="p-5 bg-white/50 dark:bg-slate-900/80 backdrop-blur-md border-t border-gray-100/50 dark:border-gray-700 rounded-b-2xl">
+        <div className="space-y-3 mb-4">
+          {/* Descuento Input */}
+          <div className="flex items-center justify-between group bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-emerald-100 dark:focus-within:ring-emerald-900 transition-all">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Descuento</span>
+            <div className="flex items-center">
+              <span className="text-gray-400 dark:text-gray-500 text-sm mr-1">S/.</span>
+              <input
+                type="text"
+                value={discountInput}
+                onChange={handleDiscountChange}
+                placeholder="0.00"
+                className="w-16 text-right text-sm font-semibold text-gray-800 dark:text-white focus:outline-none bg-transparent"
+              />
             </div>
           </div>
-        </>
-      )}
 
-      {showPaymentMethods && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2">
-          <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Método de Pago</h3>
-            {selectedPaymentMethod && (
-              <div className="flex items-center gap-2 mb-4 bg-emerald-50 border border-emerald-200 rounded-lg p-2 justify-center">
-                <span className="text-2xl">
-                  {paymentMethods.find(m => m.id === selectedPaymentMethod)?.icon}
-                </span>
-                <span className="font-medium text-emerald-800">
-                  {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name}
-                </span>
+          {/* Totales */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-gray-500 dark:text-gray-400 text-sm font-medium">
+              <span>Subtotal</span>
+              <span>S/. {state.subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-500 dark:text-gray-400 text-sm font-medium">
+              <span>IGV (18%)</span>
+              <span>S/. {state.tax.toFixed(2)}</span>
+            </div>
+            {state.discount > 0 && (
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-400 text-sm font-bold">
+                <span>Descuento</span>
+                <span>- S/. {state.discount.toFixed(2)}</span>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              {paymentMethods.map((method) => (
-                <button
-                  key={method.id}
-                  onClick={() => handlePayment(method.id)}
-                  className="p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-center active:scale-95"
-                >
-                  <div className="text-2xl mb-2">{method.icon}</div>
-                  <p className="font-medium">{method.name}</p>
-                </button>
-              ))}
+            <div className="flex justify-between pt-3 mt-2 border-t border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold text-gray-800 dark:text-white">Total</span>
+              <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">
+                S/. {state.total.toFixed(2)}
+              </span>
             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {paymentMethods.map((pm) => (
             <button
-              onClick={() => setShowPaymentMethods(false)}
-              className="w-full mt-3 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors active:scale-95"
+              key={pm.id}
+              onClick={() => handlePayment(pm.id)}
+              className="flex flex-col items-center justify-center p-2 rounded-xl bg-gray-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700 transition-all active:scale-95"
+              title={pm.name}
             >
-              Cancelar
+              <span className="text-xl mb-1 filter grayscale-[0.2]">{pm.icon}</span>
+              <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">{pm.name}</span>
             </button>
+          ))}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={clearCart}
+            className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            title="Limpiar"
+          >
+            <Trash2 size={20} />
+          </button>
+          <button
+            onClick={() => setShowPaymentMethods(true)}
+            disabled={state.items.length === 0}
+            className="flex-1 bg-gray-900 dark:bg-white dark:text-slate-900 text-white py-3 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg shadow-gray-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+          >
+            <span>Pagar S/. {state.total.toFixed(2)}</span>
+            <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </div>
+
+      {/* Payment Modal Override (Simple Overlay) */}
+      {showPaymentMethods && (
+        <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl z-50 rounded-2xl flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+          <button
+            onClick={() => setShowPaymentMethods(false)}
+            className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-slate-700 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-600 dark:text-gray-200"
+          >
+            <X size={20} />
+          </button>
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-6">Confirmar Método de Pago</h3>
+          <div className="grid grid-cols-2 gap-4 w-full">
+            {paymentMethods.map(pm => (
+              <button
+                key={pm.id}
+                onClick={() => handlePayment(pm.id)}
+                className={`flex flex-col items-center p-4 rounded-2xl border-2 transition-all active:scale-95 ${pm.color} dark:bg-transparent dark:border-gray-700 dark:hover:border-emerald-500`}
+              >
+                <span className="text-4xl mb-2">{pm.icon}</span>
+                <span className="font-bold dark:text-white">{pm.name}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}

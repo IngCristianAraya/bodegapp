@@ -1,9 +1,11 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -19,41 +21,49 @@ export const useAuth = () => {
   return context;
 };
 
-// Firebase Auth real
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: User | null) => {
-      setUser(firebaseUser as User | null);
+    // Check active session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setUser(userCredential.user);
-    } catch (error: unknown) {
-      if (error instanceof Error && error.message) {
-        throw new Error(error.message);
-      }
-      throw new Error('Credenciales inválidas');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
   };
 
-
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
   };
 
   const value = {
     user,
+    session,
     loading,
     login,
     logout

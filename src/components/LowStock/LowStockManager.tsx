@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { obtenerProductos } from '../../lib/firestoreProducts';
+import { obtenerProductos } from '../../lib/supabaseProducts';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 import { Product } from '../../types/inventory';
@@ -19,7 +19,7 @@ const LowStockManager: React.FC = () => {
       setProductos(
         (data as Product[]).filter(p => typeof p.name === 'string' && typeof p.stock === 'number' && typeof p.minStock === 'number')
       );
-    } catch (e) {
+    } catch {
       setError('Error al cargar productos');
     } finally {
       setLoading(false);
@@ -35,12 +35,14 @@ const LowStockManager: React.FC = () => {
   );
 
   return (
-    <div className="p-4 md:p-8 w-full min-h-screen bg-white ml-0">
+    <div className="p-4 md:p-8 w-full min-h-screen bg-gray-50 dark:bg-slate-900 ml-0 transition-colors duration-300">
       <div className="flex items-center gap-3 mb-6">
-        <AlertTriangle className="text-amber-500" size={32} />
-        <h2 className="text-2xl font-bold text-amber-700">Productos Bajo Stock</h2>
+        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+          <AlertTriangle className="text-amber-600 dark:text-amber-500" size={32} />
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">Productos Bajo Stock</h2>
         <button
-          className="ml-auto px-3 py-1 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center gap-1 text-sm"
+          className="ml-auto px-4 py-2 rounded-xl bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm font-semibold shadow-sm transition-all active:scale-95"
           onClick={fetchProductos}
           title="Recargar"
         >
@@ -48,58 +50,67 @@ const LowStockManager: React.FC = () => {
         </button>
       </div>
       {loading ? (
-        <div className="flex justify-center items-center py-16 text-amber-700">
+        <div className="flex justify-center items-center py-16 text-gray-500 dark:text-gray-400">
           <span className="animate-spin mr-2"><RefreshCw size={20} /></span>
           Cargando productos...
         </div>
       ) : error ? (
-        <div className="text-red-600 text-center py-10">{error}</div>
+        <div className="text-red-600 dark:text-red-400 text-center py-10 font-medium">{error}</div>
       ) : productosBajoStock.length === 0 ? (
-        <div className="text-center py-12 text-gray-500 text-lg">
-          <AlertTriangle className="mx-auto mb-2 text-amber-400" size={36} />
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-lg">
+          <div className="mx-auto mb-4 w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+            <AlertTriangle className="text-green-500" size={32} />
+          </div>
           ¡Todos tus productos están por encima del stock mínimo!
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0 rounded-xl overflow-hidden shadow-sm text-sm bg-white">
-            <thead>
-              <tr className="bg-amber-50 text-amber-900">
-                <th className="py-3 px-4 border-b text-left">Producto</th>
-                <th className="py-3 px-4 border-b text-center">Stock actual</th>
-                <th className="py-3 px-4 border-b text-center">Stock mínimo</th>
-                <th className="py-3 px-4 border-b text-center">Categoría</th>
-                <th className="py-3 px-4 border-b text-center">Proveedor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productosBajoStock.map((p) => (
-                <tr key={p.id} className="hover:bg-amber-50">
-                  <td className="py-2 px-4 font-semibold text-gray-900 flex items-center gap-2">
-                    {p.imageUrl && (
-                      <Image
-                        src={p.imageUrl}
-                        alt={p.name || 'Producto'}
-                        width={32}
-                        height={32}
-                        className="w-8 h-8 object-cover rounded mr-2 border border-amber-100"
-                        style={{ minWidth: 32, minHeight: 32 }}
-                        unoptimized
-                      />
-                    )}
-                    {p.name}
-                  </td>
-                  <td className="py-2 px-4 text-center">
-                    <span className="inline-block px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
-                      {p.stock}
-                    </span>
-                  </td>
-                  <td className="py-2 px-4 text-center">{p.minStock}</td>
-                  <td className="py-2 px-4 text-center">{p.category || '-'}</td>
-                  <td className="py-2 px-4 text-center">{p.supplier || '-'}</td>
+        <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl bg-white dark:bg-slate-900">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="py-4 px-6 text-left font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider text-xs">Producto</th>
+                  <th className="py-4 px-6 text-center font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider text-xs">Stock actual</th>
+                  <th className="py-4 px-6 text-center font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider text-xs">Stock mínimo</th>
+                  <th className="py-4 px-6 text-center font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider text-xs">Categoría</th>
+                  <th className="py-4 px-6 text-center font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider text-xs">Proveedor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                {productosBajoStock.map((p) => (
+                  <tr key={p.id} className="hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors group">
+                    <td className="py-3 px-6 font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                      <div className="relative w-10 h-10 flex-shrink-0 bg-gray-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700">
+                        {p.imageUrl && (
+                          <Image
+                            src={p.imageUrl}
+                            alt={p.name || 'Producto'}
+                            fill
+                            className="object-cover"
+                            sizes="40px"
+                            unoptimized
+                          />
+                        )}
+                      </div>
+                      {p.name}
+                    </td>
+                    <td className="py-3 px-6 text-center">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-100/80 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50">
+                        {p.stock}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6 text-center font-medium text-gray-600 dark:text-gray-400">{p.minStock}</td>
+                    <td className="py-3 px-6 text-center">
+                      <span className="inline-flex px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">
+                        {p.category || '-'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-6 text-center text-gray-500 dark:text-gray-400">{p.supplier || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

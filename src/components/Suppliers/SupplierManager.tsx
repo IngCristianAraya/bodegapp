@@ -5,8 +5,9 @@ import {
   obtenerProveedores,
   actualizarProveedor,
   eliminarProveedor
-} from '../../lib/firestoreSuppliers';
+} from '../../lib/supabaseSuppliers';
 import type { Supplier } from '../../types/index';
+import { Plus, Edit2, Trash2, Phone, Mail, MapPin, Truck } from 'lucide-react';
 
 const initialForm: Partial<Supplier> = {
   name: '',
@@ -42,7 +43,8 @@ const SupplierManager: React.FC = () => {
     fetchProveedores();
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -51,25 +53,22 @@ const SupplierManager: React.FC = () => {
         await actualizarProveedor(editId, form);
         setSuccess('Proveedor actualizado');
       } else {
-        // Validar campos requeridos
-      const { name, contact, phone, address } = form;
-      if (!name || !contact || !phone || !address) {
-        setError('Completa todos los campos obligatorios');
-        setLoading(false);
-        return;
-      }
-      // Construir objeto limpio sin id
-      const proveedorNuevo = {
-        name,
-        contact,
-        phone,
-        address,
-        email: form.email || '',
-        products: [],
-        createdAt: new Date(),
-      };
-      console.log('Proveedor a guardar:', proveedorNuevo);
-      await crearProveedor(proveedorNuevo);
+        const { name, contact, phone, address } = form;
+        if (!name || !contact || !phone || !address) {
+          setError('Completa todos los campos obligatorios');
+          setLoading(false);
+          return;
+        }
+        const proveedorNuevo = {
+          name,
+          contact,
+          phone,
+          address,
+          email: form.email || '',
+          products: [],
+          createdAt: new Date(),
+        };
+        await crearProveedor(proveedorNuevo);
         setSuccess('Proveedor creado');
       }
       setModalOpen(false);
@@ -96,7 +95,7 @@ const SupplierManager: React.FC = () => {
       await eliminarProveedor(id);
       setSuccess('Proveedor eliminado');
       fetchProveedores();
-    } catch (e) {
+    } catch {
       setError('Error al eliminar');
     } finally {
       setLoading(false);
@@ -104,97 +103,153 @@ const SupplierManager: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Proveedores</h2>
+    <div className="glass-card rounded-2xl shadow-xl w-full max-w-full overflow-hidden animate-in fade-in zoom-in duration-300 bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+        <div>
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <Truck className="text-emerald-600 dark:text-emerald-400" />
+            Proveedores
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Gestiona tus relaciones comerciales</p>
+        </div>
         <button
-          className="bg-emerald-600 text-white px-4 py-2 rounded-lg"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-emerald-200 dark:hover:shadow-none active:scale-95 border border-transparent"
           onClick={() => { setModalOpen(true); setForm(initialForm); setEditId(null); }}
         >
+          <Plus size={18} />
           Nuevo Proveedor
         </button>
       </div>
-      {error && <div className="text-red-600 mb-2">{error}</div>}
-      {success && <div className="text-green-600 mb-2">{success}</div>}
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="py-2 px-3 text-center">Nombre</th>
-            <th className="py-2 px-3 text-center">Contacto</th>
-            <th className="py-2 px-3 text-center">Teléfono</th>
-            <th className="py-2 px-3 text-center">Email</th>
-            <th className="py-2 px-3 text-center">Dirección</th>
-            <th className="py-2 px-3 text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
+
+      <div className="p-6">
+        {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-lg mb-4 text-sm font-medium border border-red-200 dark:border-red-900/50">{error}</div>}
+        {success && <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-lg mb-4 text-sm font-medium border border-emerald-200 dark:border-emerald-900/50">{success}</div>}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {proveedores.map(p => (
-            <tr key={p.id} className="border-t">
-              <td className="py-2 px-3 text-center">{p.name}</td>
-              <td className="py-2 px-3 text-center">{p.contact}</td>
-              <td className="py-2 px-3 text-center">{p.phone}</td>
-              <td className="py-2 px-3 text-center">{p.email}</td>
-              <td className="py-2 px-3 text-center">{p.address}</td>
-              <td className="py-2 px-3 text-center space-x-2">
-                <button className="text-blue-600" onClick={() => handleEdit(p)}>Editar</button>
-                <button className="text-red-600" onClick={() => handleDelete(p.id)}>Eliminar</button>
-              </td>
-            </tr>
+            <div key={p.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100">{p.name}</h3>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleEdit(p)}
+                    className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
+                    title="Editar"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 flex justify-center"><span className="font-semibold text-gray-400 dark:text-gray-500">👤</span></div>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{p.contact}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 flex justify-center"><Phone size={14} className="text-gray-400 dark:text-gray-500" /></div>
+                  <span>{p.phone}</span>
+                </div>
+                {p.email && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 flex justify-center"><Mail size={14} className="text-gray-400 dark:text-gray-500" /></div>
+                    <span className="truncate">{p.email}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <div className="w-6 flex justify-center"><MapPin size={14} className="text-gray-400 dark:text-gray-500" /></div>
+                  <span className="truncate">{p.address}</span>
+                </div>
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
+
+          {proveedores.length === 0 && !loading && (
+            <div className="col-span-full py-12 text-center text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+              <Truck size={48} className="mx-auto mb-2 opacity-50" />
+              <p>No hay proveedores registrados</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-2">
-            <h3 className="text-lg font-semibold mb-4">{editId ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h3>
-            <form onSubmit={handleSave} className="space-y-3">
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Nombre"
-                value={form.name || ''}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                required
-              />
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Contacto"
-                value={form.contact || ''}
-                onChange={e => setForm({ ...form, contact: e.target.value })}
-                required
-              />
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Teléfono"
-                value={form.phone || ''}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                required
-              />
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Email"
-                type="email"
-                value={form.email || ''}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-              />
-              <input
-                className="w-full border px-3 py-2 rounded"
-                placeholder="Dirección"
-                value={form.address || ''}
-                onChange={e => setForm({ ...form, address: e.target.value })}
-                required
-              />
-              <div className="flex justify-end space-x-2 pt-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200 border border-transparent dark:border-gray-700">
+            <h3 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">{editId ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h3>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Empresa</label>
+                <input
+                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder-gray-400"
+                  placeholder="Nombre de la empresa"
+                  value={form.name || ''}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Contacto</label>
+                <input
+                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder-gray-400"
+                  placeholder="Nombre del contacto"
+                  value={form.contact || ''}
+                  onChange={e => setForm({ ...form, contact: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Teléfono</label>
+                  <input
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder-gray-400"
+                    placeholder="Teléfono"
+                    value={form.phone || ''}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Email</label>
+                  <input
+                    className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder-gray-400"
+                    placeholder="Email (opcional)"
+                    type="email"
+                    value={form.email || ''}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Dirección</label>
+                <input
+                  className="w-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all placeholder-gray-400"
+                  placeholder="Dirección fiscal o real"
+                  value={form.address || ''}
+                  onChange={e => setForm({ ...form, address: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg"
+                  className="px-5 py-2.5 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
                   onClick={() => { setModalOpen(false); setForm(initialForm); setEditId(null); }}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+                  className="px-5 py-2.5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20 transition-all active:scale-95 disabled:opacity-70"
                   disabled={loading}
                 >
                   {loading ? 'Guardando...' : 'Guardar'}

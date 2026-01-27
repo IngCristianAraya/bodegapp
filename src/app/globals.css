@@ -1,17 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Premium Palette - Light Mode */
+  --background: #f8fafc;
+  /* Slate 50 */
+  --foreground: #0f172a;
+  /* Slate 900 */
+
+  --primary: #047857;
+  /* Emerald 700 - Deep & Professional */
+  --primary-foreground: #ffffff;
+
+  --secondary: #e2e8f0;
+  /* Slate 200 */
+  --secondary-foreground: #1e293b;
+  /* Slate 800 */
+
+  --accent: #dcfce7;
+  /* Emerald 100 */
+  --accent-foreground: #166534;
+  /* Emerald 800 */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #047857;
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
 }
-
-
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Premium Palette - Dark Mode */
+    --background: #020617;
+    /* Slate 950 */
+    --foreground: #f8fafc;
+    /* Slate 50 */
+
+    --primary: #10b981;
+    /* Emerald 500 - Vivid for dark mode */
+    --primary-foreground: #ffffff;
+
+    --secondary: #1e293b;
+    /* Slate 800 */
+    --secondary-foreground: #f8fafc;
+
+    --accent: #064e3b;
+    /* Emerald 900 */
+    --accent-foreground: #d1fae5;
+    /* Emerald 100 */
+
+    --card: #0f172a;
+    /* Slate 900 */
+    --card-foreground: #f8fafc;
+
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #10b981;
+
+    --glass-bg: rgba(2, 6, 23, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
   }
+}
+
+:root {
+  /* Default - Light Mode */
+  --chart-text: #475569;
+  /* Slate 600 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-text: #cbd5e1;
+    /* Slate 300 */
+  }
+}
+
+.dark {
+  --chart-text: #f1f5f9;
+  /* Slate 100 - High contrast for dark mode */
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  /* Increased opacity for better text readability */
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-card {
+  /* Darker background for dark mode contrast */
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -21,7 +111,8 @@ body {
 }
 
 /* Forzar colores seguros para PDF de ticket */
-.ticket-pdf-safe, .ticket-pdf-safe * {
+.ticket-pdf-safe,
+.ticket-pdf-safe * {
   color: #222 !important;
   background: #fff !important;
   box-shadow: none !important;
@@ -29,7 +120,8 @@ body {
 }
 
 /* Override de variables de Tailwind para ticket blanco y negro */
-.ticket-pdf-safe, .ticket-pdf-safe * {
+.ticket-pdf-safe,
+.ticket-pdf-safe * {
   --color-red-50: #fff !important;
   --color-red-100: #fff !important;
   --color-red-200: #fff !important;
@@ -95,4 +187,3 @@ body {
   box-shadow: none !important;
   border-color: #222 !important;
 }
-
