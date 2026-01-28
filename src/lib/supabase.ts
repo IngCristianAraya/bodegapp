@@ -10,7 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 console.log('Initializing Supabase client with URL:', supabaseUrl?.substring(0, 20) + '...');
 
-export const supabase = createClient(
-    supabaseUrl || '',
-    supabaseAnonKey || ''
-);
+// Fallback to prevent build crash if env vars are missing (e.g. during build)
+const url = supabaseUrl || 'https://placeholder.supabase.co';
+const key = supabaseAnonKey || 'placeholder';
+
+export const supabase = createClient(url, key);
