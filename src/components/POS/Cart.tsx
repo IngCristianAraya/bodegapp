@@ -18,7 +18,7 @@ interface CartProps {
 
 export default function Cart({ cart, removeFromCart, updateQuantity, total, subtotal, tax, discount, setDiscount, onCheckout, clearCart }: CartProps) {
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  // const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null); // Unused
   const [discountInput, setDiscountInput] = useState(discount > 0 ? discount.toString() : '');
 
   React.useEffect(() => {
@@ -44,7 +44,7 @@ export default function Cart({ cart, removeFromCart, updateQuantity, total, subt
   ];
 
   const handlePayment = (method: string) => {
-    setSelectedPaymentMethod(method);
+    // setSelectedPaymentMethod(method);
     setShowPaymentMethods(false);
     setTimeout(() => {
       onCheckout(method);

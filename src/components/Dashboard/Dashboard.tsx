@@ -2,7 +2,6 @@
 import React, { FC, useCallback, useEffect, useState, useMemo } from 'react';
 import type { Product } from '../../types/inventory';
 import type { Sale } from '../../types/index';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   ShoppingCart,
   AlertTriangle,

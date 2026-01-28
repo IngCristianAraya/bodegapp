@@ -18,17 +18,16 @@ interface ProductFormProps {
 const inputClass =
   'block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 text-sm';
 
-const ProductForm: React.FC<ProductFormProps> = ({ 
-  form, 
-  setForm, 
-  onSubmit, 
-  saving, 
+const ProductForm: React.FC<ProductFormProps> = ({
+  form,
+  setForm,
+  onSubmit,
+  saving,
   editProduct,
   onCancel,
-  proveedores = [],
 }) => {
   const { showToast } = useToast();
-  
+
   const hasSubcategories = !!(form.category && categoryData[form.category as keyof typeof categoryData]?.subcategories?.length);
   const subcategoryRequired = !!hasSubcategories;
   const missingSubcategory = subcategoryRequired && (!form.subcategory || form.subcategory.trim() === '');
@@ -67,23 +66,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   // Inicializa isExemptIGV/isExonerated automáticamente según la categoría
-  const [forceExempt, setForceExempt] = React.useState(false);
   React.useEffect(() => {
     if (form.category) {
       const isExempt = exemptCategories.some(cat => form.category.toLowerCase().includes(cat));
-      setForceExempt(isExempt);
       if (form.isExemptIGV !== isExempt || form.isExonerated !== isExempt) {
         setForm({ ...form, isExemptIGV: isExempt, isExonerated: isExempt });
       }
-    } else {
-      setForceExempt(false);
     }
   }, [form.category]);
 
   // Manejar cambio en el tipo de producto (unidad/kg)
   const handleUnitTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const isKg = e.target.value === 'kg';
-    setForm({ 
+    setForm({
       ...form,
       unit: isKg ? 'kg' : 'unidad',
       unitType: isKg ? 'kg' : 'unidad',
@@ -97,20 +92,20 @@ const ProductForm: React.FC<ProductFormProps> = ({
   // Manejar cambio en el stock
   const handleStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const numValue = form.ventaPorPeso 
+    const numValue = form.ventaPorPeso
       ? parseFloat(value) || 0
       : Math.max(0, Math.floor(parseFloat(value)) || 0);
-    
+
     setForm({ ...form, stock: numValue });
   };
 
   // Manejar cambio en el stock mínimo
   const handleMinStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const numValue = form.ventaPorPeso 
+    const numValue = form.ventaPorPeso
       ? parseFloat(value) || 0
       : Math.max(0, Math.floor(parseFloat(value)) || 0);
-    
+
     setForm({ ...form, minStock: numValue });
   };
 
@@ -118,7 +113,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Secciones del formulario existentes... */}
-        
+
         {/* Sección de tipo de producto */}
         <div className="flex flex-col">
           <label className="text-xs font-semibold text-gray-700 mb-1">Tipo de producto</label>
@@ -161,7 +156,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           )}
           {editProduct && (
             <span className="text-xs text-gray-500 mt-1">
-              El stock solo se modifica mediante "Agregar ingreso" o "Ajustar stock".
+              El stock solo se modifica mediante &quot;Agregar ingreso&quot; o &quot;Ajustar stock&quot;.
             </span>
           )}
         </div>
@@ -187,9 +182,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </div>
 
         {/* Resto del formulario... */}
-        
+
       </div>
-      
+
       {/* Botones de acción */}
       <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
         <button
