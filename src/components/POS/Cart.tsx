@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, CreditCard, X, ChevronRight } from 'lucide-react';
-import { useCart } from '../../contexts/CartContext';
+import { Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react';
+import type { CartItem } from '../../types/index';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CartProps {
+  cart: CartItem[];
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  total: number;
+  subtotal: number;
+  tax: number;
+  discount: number;
+  setDiscount: (discount: number) => void;
   onCheckout: (paymentMethod: string) => void;
+  clearCart: () => void;
 }
 
-const Cart: React.FC<CartProps> = ({ onCheckout }) => {
-  const { state, updateQuantity, removeItem, clearCart, setDiscount } = useCart();
+export default function Cart({ cart, removeFromCart, updateQuantity, total, subtotal, tax, discount, setDiscount, onCheckout, clearCart }: CartProps) {
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
-  const [discountInput, setDiscountInput] = useState(state.discount > 0 ? state.discount.toString() : '');
+  const [discountInput, setDiscountInput] = useState(discount > 0 ? discount.toString() : '');
 
   React.useEffect(() => {
-    setDiscountInput(state.discount > 0 ? state.discount.toString() : '');
-  }, [state.discount]);
+    setDiscountInput(discount > 0 ? discount.toString() : '');
+  }, [discount]);
 
   const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -54,13 +62,13 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
           Carrito de Compra
         </h2>
         <span className="bg-gray-900 dark:bg-white dark:text-slate-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-          {state.items.length} items
+          {cart.length} items
         </span>
       </div>
 
       {/* Items List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-        {state.items.length === 0 ? (
+        {cart.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
             <div className="bg-gray-50 dark:bg-slate-800 p-6 rounded-full mb-4">
               <ShoppingCart className="w-12 h-12 text-gray-300 dark:text-gray-600" />
@@ -70,7 +78,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
           </div>
         ) : (
           <AnimatePresence>
-            {state.items.map((item) => (
+            {cart.map((item) => (
               <motion.div
                 key={item.product.id}
                 initial={{ opacity: 0, x: -20 }}
@@ -151,22 +159,22 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
           <div className="space-y-1">
             <div className="flex justify-between text-gray-500 dark:text-gray-400 text-sm font-medium">
               <span>Subtotal</span>
-              <span>S/. {state.subtotal.toFixed(2)}</span>
+              <span>S/. {subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-500 dark:text-gray-400 text-sm font-medium">
               <span>IGV (18%)</span>
-              <span>S/. {state.tax.toFixed(2)}</span>
+              <span>S/. {tax.toFixed(2)}</span>
             </div>
-            {state.discount > 0 && (
+            {discount > 0 && (
               <div className="flex justify-between text-emerald-600 dark:text-emerald-400 text-sm font-bold">
                 <span>Descuento</span>
-                <span>- S/. {state.discount.toFixed(2)}</span>
+                <span>- S/. {discount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between pt-3 mt-2 border-t border-gray-200 dark:border-gray-700">
               <span className="text-lg font-bold text-gray-800 dark:text-white">Total</span>
               <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">
-                S/. {state.total.toFixed(2)}
+                S/. {total.toFixed(2)}
               </span>
             </div>
           </div>
@@ -232,5 +240,3 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
     </div>
   );
 };
-
-export default Cart;

@@ -29,7 +29,7 @@ const Reports: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
 
-  const cargarVentasYProductos = async (): Promise<void> => {
+  const cargarVentasYProductos = React.useCallback(async (): Promise<void> => {
     if (!tenant?.id) return;
     setLoading(true);
     try {
@@ -44,9 +44,9 @@ const Reports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }
+  }, [tenant?.id]);
 
-  const cargarProductos = async (): Promise<void> => {
+  const cargarProductos = React.useCallback(async (): Promise<void> => {
     if (!tenant?.id) return;
     setLoading(true);
     try {
@@ -55,23 +55,7 @@ const Reports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }
-
-  const handleExportAll = async () => {
-    if (!tenant?.id) return;
-    try {
-      const blob = await exportAllDataToCSV(tenant.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'todos_los_datos.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error al exportar todos los datos:', error);
-      alert('Error al exportar todos los datos.');
-    }
-  };
+  }, [tenant?.id]);
 
   useEffect(() => {
     setLoading(true);
@@ -80,7 +64,7 @@ const Reports: React.FC = () => {
     } else if (reportType === 'inventario') {
       cargarProductos();
     }
-  }, [reportType]);
+  }, [reportType, cargarVentasYProductos, cargarProductos]);
 
   useEffect(() => {
     setVentasPage(1);

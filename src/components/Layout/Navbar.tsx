@@ -24,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
   try {
     const lowStockContext = useLowStock();
     criticalStockCount = lowStockContext.criticalStockCount;
-  } catch (error) {
+  } catch { // Removed 'error' variable as it was unused
     // Context not available yet, use default value
     console.warn('LowStockContext not available in Navbar');
   }

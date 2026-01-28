@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Lock, Mail, ChevronRight, ShieldCheck, ArrowLeft, Store, Globe, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, ChevronRight, ShieldCheck, ArrowLeft, Store, Globe, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 

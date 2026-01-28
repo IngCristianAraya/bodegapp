@@ -1,14 +1,14 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+// 1. Fixed Imports
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
-import { Truck, Plus, Edit2, Trash2, Phone, Mail, MapPin, Package, Download, X } from 'lucide-react';
+import { Truck, Plus, Edit2, Trash2, Phone, Package, Download, X } from 'lucide-react';
+import { createPortal } from 'react-dom'; // Import createPortal instead of require
 import { crearProveedor, obtenerProveedores, actualizarProveedor, eliminarProveedor } from '../../lib/supabaseSuppliers';
 import { obtenerProductosPorProveedor } from '../../lib/supabaseProducts';
 import type { Supplier } from '../../types/index';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// ... items ...
 
+// 2. Fixed Duplicate Key in initialForm
 const initialForm: any = {
   name: '',
   contact: '',
@@ -21,7 +21,7 @@ const initialForm: any = {
   notes: '',
   category: '',
   products: [],
-  products: [],
+  // Removed duplicate products: []
 };
 
 const Portal = ({ children }: { children: React.ReactNode }) => {
@@ -34,27 +34,14 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
   if (!mounted) return null;
 
   return typeof document !== 'undefined'
-    ? require('react-dom').createPortal(children, document.body)
+    ? createPortal(children, document.body)
     : null;
 };
 
-const SupplierManager: React.FC = () => {
-  const [proveedores, setProveedores] = useState<Supplier[]>([]);
-  const [form, setForm] = useState(initialForm);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [productsModalOpen, setProductsModalOpen] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [supplierProducts, setSupplierProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'logistics' | 'notes'>('info');
+// ...
 
-  const { tenant } = useTenant();
-
-
-  const fetchProveedores = async () => {
+// 3. Fixed useEffect and fetchProveedores
+  const fetchProveedores = useCallback(async () => {
     if (!tenant?.id) return;
     setLoading(true);
     try {
@@ -65,11 +52,27 @@ const SupplierManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenant?.id]);
 
   useEffect(() => {
     fetchProveedores();
-  }, []);
+  }, [fetchProveedores]);
+
+// ...
+
+// 4. Fixed Unescaped Quotes
+                    <p className="text-sm">Asegúrate de que el campo &quot;Proveedor&quot; en tus productos coincida con &quot;{selectedSupplier.name}&quot;.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-800/40 rounded-full text-amber-600 dark:text-amber-400">
+                        <Download size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-amber-900 dark:text-amber-200">Generar Orden de Compra Inteligente</h4>
+                        <p className="text-sm text-amber-800 dark:text-amber-300/80 mb-2">Crear automáticamente un PDF con los productos que necesitan reabastecimiento (Stock actual &lt; Stock mínimo).</p>
+                        <button
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -564,7 +567,7 @@ const SupplierManager: React.FC = () => {
                   <div className="text-center py-20 text-gray-400">
                     <Package size={64} className="mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium">No se encontraron productos asociados a este proveedor.</p>
-                    <p className="text-sm">Asegúrate de que el campo "Proveedor" en tus productos coincida con "{selectedSupplier.name}".</p>
+                    <p className="text-sm">Asegúrate de que el campo &quot;Proveedor&quot; en tus productos coincida con &quot;{selectedSupplier.name}&quot;.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-6">

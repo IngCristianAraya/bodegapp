@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host') || '';
 
     // Definir los dominios base (ajusta esto según tu configuración de Vercel/Dominio)

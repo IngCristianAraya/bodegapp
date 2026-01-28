@@ -20,12 +20,6 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
         return 'text-red-600 dark:text-red-400';
     };
 
-    const getMarginBg = (margin: number) => {
-        if (margin >= 30) return 'bg-green-100 dark:bg-green-900/30';
-        if (margin >= 15) return 'bg-yellow-100 dark:bg-yellow-900/30';
-        return 'bg-red-100 dark:bg-red-900/30';
-    };
-
     return (
         <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between mb-6">

@@ -23,11 +23,7 @@ const TemporalComparison: React.FC<TemporalComparisonProps> = ({ weekComparison,
         return 'text-gray-600 dark:text-gray-400';
     };
 
-    const getChangeBg = (change: number) => {
-        if (change > 0) return 'bg-green-100 dark:bg-green-900/30';
-        if (change < 0) return 'bg-red-100 dark:bg-red-900/30';
-        return 'bg-gray-100 dark:bg-gray-800';
-    };
+
 
     const getChangeIcon = (change: number) => {
         if (change > 0) return <TrendingUp size={14} />;

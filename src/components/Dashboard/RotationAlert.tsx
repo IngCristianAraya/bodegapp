@@ -38,7 +38,7 @@ const RotationAlert: React.FC<RotationAlertProps> = ({ deadStock, slowMoving }) 
 
             <div className="space-y-3">
                 {/* Dead Stock (>60 días) */}
-                {deadStock.slice(0, 3).map((item, index) => (
+                {deadStock.slice(0, 3).map((item) => (
                     <div
                         key={item.productId}
                         className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800"

@@ -1,6 +1,6 @@
+
 import React, { forwardRef } from 'react';
 import { StoreSettings } from '@/lib/supabaseSettings';
-import Image from 'next/image';
 
 interface TicketVentaProps {
   venta: {
@@ -24,8 +24,6 @@ const TicketVenta = forwardRef<HTMLDivElement, TicketVentaProps>(({ venta, setti
   const businessName = settings?.business_name || 'BODEGA APP';
   const ruc = settings?.ruc || '---';
   const address = settings?.address || '---';
-  const email = settings?.email;
-  const phone = settings?.phone;
   const logoUrl = settings?.logo_url;
   const footer = settings?.ticket_footer || '¡Gracias por su compra!';
 

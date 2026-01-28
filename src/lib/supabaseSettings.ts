@@ -41,7 +41,7 @@ export async function getStoreSettings(tenantId: string): Promise<StoreSettings 
  */
 export async function updateStoreSettings(tenantId: string, settings: Partial<StoreSettings>) {
     // Limpiamos el objeto para evitar conflictos de ID si es un upsert por tenant_id
-    const { id, updated_at, ...cleanSettings } = settings;
+    const { id: _id, updated_at: _updated_at, ...cleanSettings } = settings;
 
     const { data, error } = await supabase
         .from('store_settings')

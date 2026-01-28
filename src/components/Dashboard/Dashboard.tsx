@@ -1,10 +1,10 @@
+
 import React, { FC, useCallback, useEffect, useState, useMemo } from 'react';
 import type { Product } from '../../types/inventory';
 import type { Sale } from '../../types/index';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   ShoppingCart,
-  Package,
   AlertTriangle,
   DollarSign,
   TrendingUp,
@@ -16,7 +16,6 @@ import RotationAlert from './RotationAlert';
 import ProfitabilityMatrix from './ProfitabilityMatrix';
 import StockPredictionAlert from './StockPredictionAlert';
 import TemporalComparison from './TemporalComparison';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
 import { useTenant } from '../../contexts/TenantContext';
@@ -270,14 +269,14 @@ const Dashboard: FC = () => {
         {/* Main Stats */}
         <StatsCard
           title="Ventas del Día"
-          value={`S/. ${ventasHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
+          value={`S /.${ventasHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })} `}
           icon={DollarSign}
           color="bg-emerald-500"
           trend={{ value: 12.5, isPositive: true }}
         />
         <StatsCard
           title="Ganancias"
-          value={`S/. ${gananciaHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
+          value={`S /.${gananciaHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })} `}
           icon={TrendingUp}
           color="bg-amber-500"
           trend={{ value: 8.4, isPositive: true }}
@@ -326,7 +325,7 @@ const Dashboard: FC = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--chart-text)', fontSize: 13, fontWeight: 500 }}
-                  tickFormatter={(value) => `S/.${value}`}
+                  tickFormatter={(value) => `S /.${value} `}
                 />
                 <Tooltip
                   contentStyle={{
@@ -339,7 +338,7 @@ const Dashboard: FC = () => {
                     fontWeight: 600
                   }}
                   itemStyle={{ color: '#10b981', fontWeight: 700 }}
-                  formatter={(value: number) => [`S/. ${value.toFixed(2)}`, 'Ventas']}
+                  formatter={(value: number) => [`S /.${value.toFixed(2)} `, 'Ventas']}
                 />
                 <Area
                   type="monotone"
@@ -370,11 +369,11 @@ const Dashboard: FC = () => {
                   dataKey="value"
                 >
                   {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    <Cell key={`cell - ${index} `} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => `S/. ${value.toFixed(2)}`}
+                  formatter={(value: number) => `S /.${value.toFixed(2)} `}
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     borderRadius: '12px',
@@ -411,8 +410,8 @@ const Dashboard: FC = () => {
                 <button
                   key={p}
                   onClick={() => setSelectedPeriod(p)}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedPeriod === p ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
+                  className={`px - 3 py - 1 rounded - md text - xs font - bold transition - all ${selectedPeriod === p ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    } `}
                 >
                   {p === 'day' ? 'Hoy' : p === 'week' ? 'Semana' : 'Mes'}
                 </button>
@@ -424,7 +423,7 @@ const Dashboard: FC = () => {
             {topProducts.map((product, index) => (
               <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100/80 dark:border-gray-700/50 last:border-0 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors px-3 rounded-lg group">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shadow-sm ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-200 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-emerald-50 text-emerald-700'}`}>
+                  <div className={`w - 8 h - 8 rounded - lg flex items - center justify - center font - bold text - sm shadow - sm ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-200 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-emerald-50 text-emerald-700'} `}>
                     #{index + 1}
                   </div>
                   <div>
