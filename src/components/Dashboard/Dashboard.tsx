@@ -11,6 +11,7 @@ import {
   Activity,
   Calendar
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import StatsCard from './StatsCard';
 import RotationAlert from './RotationAlert';
 import ProfitabilityMatrix from './ProfitabilityMatrix';
