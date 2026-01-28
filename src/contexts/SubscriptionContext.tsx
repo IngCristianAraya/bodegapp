@@ -14,6 +14,7 @@ interface SubscriptionContextType {
     loading: boolean;
     refreshSubscription: () => Promise<void>;
     checkFeatureAccess: (feature: FeatureKey) => boolean;
+    getFeatureLimit: (feature: 'inventory_limit' | 'users_limit') => number;
 }
 
 export type FeatureKey =
