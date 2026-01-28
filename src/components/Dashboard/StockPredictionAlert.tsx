@@ -1,6 +1,5 @@
-```
 import React from 'react';
-import { TrendingUp, TrendingDown, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, AlertCircle, ArrowRight, Package } from 'lucide-react';
 import type { StockPrediction } from '../../utils/stockPrediction';
 
 interface StockPredictionAlertProps {
