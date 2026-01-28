@@ -54,7 +54,7 @@ const POS: React.FC = () => {
   const { showToast } = useToast();
   const { products, loading } = useProducts(tenant?.id);
 
-  const { state, addItem, clearCart } = useCart();
+  const { state, addItem, clearCart, removeItem, updateQuantity, setDiscount } = useCart();
   const { user } = useAuth();
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -422,7 +422,18 @@ const POS: React.FC = () => {
 
         {/* Cart Section */}
         <div className="xl:col-span-1">
-          <Cart onCheckout={handleCheckout} />
+          <Cart
+            cart={state.items}
+            removeFromCart={removeItem}
+            updateQuantity={updateQuantity}
+            total={state.total}
+            subtotal={state.subtotal}
+            tax={state.tax}
+            discount={state.discount}
+            setDiscount={setDiscount}
+            onCheckout={handleCheckout}
+            clearCart={clearCart}
+          />
         </div>
       </div>
       {showSuccess && (
