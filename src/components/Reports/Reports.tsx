@@ -508,88 +508,86 @@ const Reports: React.FC = () => {
                 </table>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
 
-      {/* Ticket Modal */}
-      {showTicketModal && ventaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b flex items-center justify-between">
-              <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
-              <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <Search className="rotate-45" size={20} />
-              </button>
-            </div>
+        {/* Ticket Modal */}
+        {showTicketModal && ventaSeleccionada && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
+              <div className="p-4 border-b flex items-center justify-between">
+                <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
+                <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <Search className="rotate-45" size={20} />
+                </button>
+              </div>
 
-            <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
-              <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
-                <div ref={ticketRef} className="p-2">
-                  <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
+              <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
+                <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
+                  <div ref={ticketRef} className="p-2">
+                    <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
-              <button
-                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
-                onClick={() => setShowTicketModal(false)}
-              >
-                Cerrar
-              </button>
-              <button
-                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
-                onClick={() => {
-                  if (!ticketRef.current) return;
-                  const printContents = ticketRef.current.innerHTML;
-                  const win = window.open('', '', 'width=400,height=600');
-                  if (win) {
-                    win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
-                    win.document.close();
-                    win.focus();
-                    setTimeout(() => {
-                      win.print();
-                      win.close();
-                    }, 500);
-                  }
-                }}
-              >
-                <Printer size={18} />
-                Imprimir
-              </button>
+              <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
+                <button
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
+                  onClick={() => setShowTicketModal(false)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                  onClick={() => {
+                    if (!ticketRef.current) return;
+                    const printContents = ticketRef.current.innerHTML;
+                    const win = window.open('', '', 'width=400,height=600');
+                    if (win) {
+                      win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
+                      win.document.close();
+                      win.focus();
+                      setTimeout(() => {
+                        win.print();
+                        win.close();
+                      }, 500);
+                    }
+                  }}
+                >
+                  <Printer size={18} />
+                  Imprimir
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-    </div>
-  );
+      </div>
+      );
 };
 
-// Adapta la venta seleccionada a la estructura esperada por TicketVenta
-function mapVentaToTicket(venta: Sale) {
+      // Adapta la venta seleccionada a la estructura esperada por TicketVenta
+      function mapVentaToTicket(venta: Sale) {
   const items = (Array.isArray(venta.items) ? venta.items : []).map((i: SaleItem) => ({
-    productName: i.productName || '',
-    quantity: i.quantity || 1,
-    unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
+        productName: i.productName || '',
+      quantity: i.quantity || 1,
+      unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
   }));
-  return {
-    receiptNumber: String(venta.receiptNumber ?? '-'),
-    cashierName: String(venta.cashierName ?? '-'),
-    customerName: String(venta.customerName ?? ''),
-    paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
-    date: venta.createdAt
-      ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as { seconds?: unknown }).seconds === 'number'
-        ? new Date((venta.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
-        : new Date(venta.createdAt as string | Date).toLocaleDateString())
+      return {
+        receiptNumber: String(venta.receiptNumber ?? '-'),
+      cashierName: String(venta.cashierName ?? '-'),
+      customerName: String(venta.customerName ?? ''),
+      paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
+      date: venta.createdAt
+      ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as {seconds ?: unknown}).seconds === 'number'
+      ? new Date((venta.createdAt as {seconds: number }).seconds * 1000).toLocaleDateString()
+      : new Date(venta.createdAt as string | Date).toLocaleDateString())
       : '-',
-    items,
-    subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
-    discount: typeof venta.discount === 'number' ? venta.discount : 0,
-    igv: typeof venta.igv === 'number' ? venta.igv : 0,
-    total: typeof venta.total === 'number' ? venta.total : 0,
+      items,
+      subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
+      discount: typeof venta.discount === 'number' ? venta.discount : 0,
+      igv: typeof venta.igv === 'number' ? venta.igv : 0,
+      total: typeof venta.total === 'number' ? venta.total : 0,
   };
 }
 
-export default Reports;
+      export default Reports;
