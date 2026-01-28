@@ -1,8 +1,6 @@
 import React from 'react';
-import Image from 'next/image';
 import { Product } from '../../types/inventory';
 import { categoryData } from '@/lib/constants/categoryData';
-import SubcategorySelect from './SubcategorySelect';
 import { useToast } from '../../contexts/ToastContext';
 
 interface ProductFormProps {

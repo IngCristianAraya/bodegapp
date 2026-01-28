@@ -13,7 +13,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
 import CategoryBadge from "@/components/common/CategoryBadge";
 
-import { crearVenta, descontarStockProductos, obtenerVentas } from "@/lib/supabaseSales";
+import { crearVenta, obtenerVentas } from "@/lib/supabaseSales";
 import { getStoreSettings, StoreSettings } from "@/lib/supabaseSettings";
 import SuccessToast from "@/components/common/SuccessToast";
 import TicketVenta from "./TicketVenta";

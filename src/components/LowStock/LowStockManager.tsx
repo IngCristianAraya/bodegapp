@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { obtenerProductos } from '../../lib/supabaseProducts';
@@ -275,8 +276,8 @@ const LowStockManager: React.FC = () => {
                       </td>
                       <td className="py-3 px-6 text-center">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold ${isCritical
-                            ? 'bg-red-100/80 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50'
-                            : 'bg-orange-100/80 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50'
+                          ? 'bg-red-100/80 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/50'
+                          : 'bg-orange-100/80 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50'
                           }`}>
                           {p.stock}
                         </span>

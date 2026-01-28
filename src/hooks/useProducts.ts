@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { obtenerProductos } from '../lib/supabaseProducts';
 import type { Product } from '../types/inventory';

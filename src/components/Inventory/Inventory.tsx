@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { crearProducto, agregarIngresoProducto, obtenerProductosConStockYAverage } from '../../lib/supabaseInventory';
 import { obtenerProveedores } from '../../lib/supabaseSuppliers';
