@@ -4,13 +4,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import ProductSearch from "@/components/POS/ProductSearch";
 import ProductGrid from "@/components/POS/ProductGrid";
 import Cart from "@/components/POS/Cart";
+import ModalPeso from "@/components/POS/ModalPeso";
 import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import CategoryBadge from "@/components/common/CategoryBadge";
 
 import { crearVenta, descontarStockProductos, obtenerVentas } from "@/lib/supabaseSales";
+import { getStoreSettings, StoreSettings } from "@/lib/supabaseSettings";
 import SuccessToast from "@/components/common/SuccessToast";
 import TicketVenta from "./TicketVenta";
 import { useReactToPrint } from 'react-to-print';
@@ -47,6 +50,7 @@ const POS: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const { tenant } = useTenant();
+  const { showToast } = useToast();
   const { products, loading } = useProducts(tenant?.id);
 
   const { state, addItem, clearCart } = useCart();
@@ -55,11 +59,36 @@ const POS: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+
+  // Cargar configuración de la tienda
+  useEffect(() => {
+    if (tenant?.id) {
+      getStoreSettings(tenant.id).then(settings => {
+        console.log('POS: Settings loaded:', settings);
+        setStoreSettings(settings);
+      });
+    }
+  }, [tenant?.id]);
+
+  // Estados para Modal de Peso
+  const [showPesoModal, setShowPesoModal] = useState(false);
+  const [productForPeso, setProductForPeso] = useState<Product | null>(null);
 
   // Resetear subcategoría al cambiar categoría
   useEffect(() => {
     setSelectedSubcategory(null);
   }, [selectedCategory]);
+
+  // Re-cargar configuración cuando se abre el ticket (refresco de datos)
+  useEffect(() => {
+    if (showTicket && tenant?.id) {
+      getStoreSettings(tenant.id).then(settings => {
+        console.log('POS: Refreshing settings for ticket...', settings);
+        setStoreSettings(settings);
+      });
+    }
+  }, [showTicket, tenant?.id]);
 
   // Extraer categorías y subcategorías desde categoryData
   const categoryList = (Object.keys(categoryData).filter(cat => cat !== 'all') as CategoryKey[]);
@@ -102,14 +131,55 @@ const POS: React.FC = () => {
   };
 
   const handleBarcodeSearch = (barcode: string) => {
-    // Buscar producto por código de barras
-    const product = products.find((p: Product) => p.barcode === barcode);
+    // Buscar producto por código de barras (o por el campo code si se usa como código de barras)
+    const product = products.find((p: Product) =>
+      (p.barcode === barcode) || (p.code === barcode)
+    );
     if (product) {
-      addItem(product);
+      handleAddToCart(product);
+      showToast(`Añadido: ${product.name}`, 'success');
+    } else {
+      showToast('Producto no encontrado por código', 'error');
     }
   };
 
+  // Oyente Global para Escáner de Código de Barras
+  useEffect(() => {
+    let buffer = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentTime = Date.now();
+
+      // Los lectores suelen disparar las teclas muy rápido (menos de 30ms entre teclas)
+      if (currentTime - lastKeyTime > 50) {
+        buffer = ''; // Resetear buffer si ha pasado mucho tiempo (fue el usuario escribiendo)
+      }
+
+      lastKeyTime = currentTime;
+
+      if (e.key === 'Enter') {
+        if (buffer.length >= 3) { // Longitud mínima razonable para un código
+          handleBarcodeSearch(buffer);
+          buffer = '';
+          e.preventDefault();
+        }
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [products]);
+
   const handleAddToCart = (product: Product, peso?: number) => {
+    if (product.ventaPorPeso && product.unitType === 'kg' && !peso) {
+      setProductForPeso(product);
+      setShowPesoModal(true);
+      return;
+    }
+
     if (peso && product.ventaPorPeso && product.unitType === 'kg') {
       addItem({ ...product }, peso);
     } else {
@@ -188,11 +258,8 @@ const POS: React.FC = () => {
         cashierName: user?.user_metadata?.full_name || user?.email || '',
         receiptNumber,
       };
-      // Generar un id único para la venta (por ejemplo, usando receiptNumber)
-      venta.id = receiptNumber;
+
       await crearVenta(venta, tenant.id);
-      // Descontar stock usando los items de la venta
-      await descontarStockProductos(venta.items, tenant.id);
       setSuccessMsg(`¡Venta procesada exitosamente con ${paymentMethod === 'cash' ? 'efectivo' : paymentMethod === 'card' ? 'tarjeta' : paymentMethod === 'yape' ? 'Yape' : paymentMethod === 'plin' ? 'Plin' : paymentMethod}!`);
       setShowSuccess(true);
       setVentaTicket({
@@ -210,21 +277,26 @@ const POS: React.FC = () => {
       setShowTicket(true);
       setTimeout(() => setShowSuccess(false), 3000);
       clearCart();
-    } catch (error: unknown) {
+      clearCart();
+    } catch (error: any) {
+      console.error('Error detallado al procesar la venta:', error);
       let msg = 'Error al procesar la venta';
-      if (typeof error === 'object' && error !== null) {
-        const err = error as { message?: string; code?: string };
-        if (typeof err.message === 'string') {
-          msg += `: ${err.message}`;
-        }
-        if (typeof err.code === 'string') {
-          msg += ` (code: ${err.code})`;
-        }
+
+      if (error?.message) {
+        msg += `: ${error.message}`;
+      } else if (typeof error === 'string') {
+        msg += `: ${error}`;
+      } else {
+        msg += ': Error desconocido en la base de datos o red.';
       }
-      console.error('Error al procesar la venta:', error);
+
+      if (error?.code) {
+        msg += ` (Código: ${error.code})`;
+      }
+
       setSuccessMsg(msg);
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3500);
+      setTimeout(() => setShowSuccess(false), 5000);
     }
   };
 
@@ -359,7 +431,7 @@ const POS: React.FC = () => {
       {showTicket && ventaTicket && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl flex flex-col items-center">
-            <TicketVenta ref={ticketRef} venta={ventaTicket} />
+            <TicketVenta ref={ticketRef} venta={ventaTicket} settings={storeSettings} />
             <div className="flex justify-center gap-4 mt-8 w-full">
               <button
                 className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-400 font-semibold transition-all duration-150"
@@ -386,6 +458,24 @@ const POS: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal para ingresar Peso (kg) */}
+      {showPesoModal && productForPeso && (
+        <ModalPeso
+          open={showPesoModal}
+          stockDisponible={productForPeso.stock || 0}
+          onClose={() => {
+            setShowPesoModal(false);
+            setProductForPeso(null);
+          }}
+          onConfirm={(peso) => {
+            handleAddToCart(productForPeso, peso);
+            setShowPesoModal(false);
+            setProductForPeso(null);
+            showToast(`Añadido: ${peso}kg de ${productForPeso.name}`, 'success');
+          }}
+        />
       )}
     </div>
   );

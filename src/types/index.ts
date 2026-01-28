@@ -17,12 +17,17 @@ export interface Supplier {
   phone: string;
   email?: string;
   address: string;
+  ruc?: string;
+  deliveryDays?: string[];
+  rating?: number;
+  notes?: string;
+  category?: string;
   products: string[];
   createdAt: Date;
 }
 
 export interface Sale extends Record<string, unknown> {
-  id: string;
+  id?: string;
   items: SaleItem[];
   total: number;
   subtotal: number;

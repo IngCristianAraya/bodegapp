@@ -1,34 +1,23 @@
 import { supabase } from './supabase';
 
-export interface StoreInfo {
-    businessName: string;
-    ruc: string;
-    address: string;
+export interface StoreSettings {
+    id?: string;
+    tenant_id: string;
+    business_name: string;
+    ruc?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    logo_url?: string;
+    ticket_footer?: string;
+    admin_password?: string;
+    updated_at?: string;
 }
 
-export async function saveStoreInfo(tenantId: string, info: StoreInfo) {
-    const { error } = await supabase
-        .from('store_settings')
-        .upsert(
-            {
-                tenant_id: tenantId,
-                business_name: info.businessName,
-                ruc: info.ruc,
-                address: info.address,
-                updated_at: new Date().toISOString()
-            },
-            { onConflict: 'tenant_id' }
-        );
-
-    if (error) {
-        console.error('Error guardando configuración:', error);
-        throw error;
-    }
-}
-
-export async function getStoreInfo(tenantId: string): Promise<StoreInfo | null> {
-    if (!tenantId) return null;
-
+/**
+ * Obtiene la configuración de la tienda para un tenant específico.
+ */
+export async function getStoreSettings(tenantId: string): Promise<StoreSettings | null> {
     const { data, error } = await supabase
         .from('store_settings')
         .select('*')
@@ -36,15 +25,40 @@ export async function getStoreInfo(tenantId: string): Promise<StoreInfo | null> 
         .single();
 
     if (error) {
-        if (error.code === 'PGRST116') return null;
-        console.error('Error obteniendo configuración:', error);
-        return null;
+        if (error.code === 'PGRST116') {
+            // No existe configuración, es normal para nuevos tenants
+            return null;
+        }
+        console.error('Error fetching store settings:', error);
+        throw error;
     }
 
-    return {
-        businessName: data.business_name,
-        ruc: data.ruc,
-        address: data.address
-    };
+    return data;
 }
 
+/**
+ * Actualiza o crea la configuración de la tienda.
+ */
+export async function updateStoreSettings(tenantId: string, settings: Partial<StoreSettings>) {
+    // Limpiamos el objeto para evitar conflictos de ID si es un upsert por tenant_id
+    const { id, updated_at, ...cleanSettings } = settings;
+
+    const { data, error } = await supabase
+        .from('store_settings')
+        .upsert({
+            ...cleanSettings,
+            tenant_id: tenantId,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'tenant_id'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error updating store settings (detallado):', JSON.stringify(error, null, 2));
+        throw new Error(`Configuración: ${error.message || 'Error desconocido'} (${error.code})`);
+    }
+
+    return data;
+}

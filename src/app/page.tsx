@@ -10,10 +10,27 @@ import Reports from "../components/Reports/Reports";
 import LowStockManager from "../components/LowStock/LowStockManager";
 import Settings from "../components/Settings/Settings";
 import SupplierManager from '../components/Suppliers/SupplierManager';
+import Hero from "../components/Landing/Hero";
+import Features from "../components/Landing/Features";
+import Pricing from "../components/Landing/Pricing";
+import Footer from "../components/Landing/Footer";
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [isLandingPage, setIsLandingPage] = useState(false);
+
+  React.useEffect(() => {
+    // Basic detection: If localhost or main domain -> Landing
+    // If subdomain -> Login
+    const hostname = window.location.hostname;
+    const isLocalhostRoot = hostname === 'localhost';
+    // 'bodegapp.tubarrio.pe' será la Landing Page
+    // 'alguna-bodega.tubarrio.pe' será el Login del Tenant
+    const isProdRoot = hostname === 'bodegapp.tubarrio.pe' || hostname === 'www.bodegapp.tubarrio.pe' || hostname === 'bodegapp.com';
+
+    setIsLandingPage(isLocalhostRoot || isProdRoot);
+  }, []);
 
   if (loading) {
     return (
@@ -23,9 +40,20 @@ export default function Home() {
     );
   }
 
-  // if (!user) {
-  //   return <LoginForm />;
-  // }
+  if (!user) {
+    if (isLandingPage) {
+      return (
+        <main className="min-h-screen bg-slate-900">
+          <Navbar currentPage="landing" onPageChange={() => { }} onLogout={() => { }} />
+          <Hero />
+          <Features />
+          <Pricing />
+          <Footer />
+        </main>
+      );
+    }
+    return <LoginForm />;
+  }
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -50,8 +78,7 @@ export default function Home() {
 
   return (
     <>
-      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={() => { }} />
-      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={() => { }} />
+      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} onLogout={logout} />
       <div className="flex-1 overflow-auto min-h-screen pt-28 px-6 pb-6 animate-in fade-in duration-500">{renderCurrentPage()}</div>
     </>
   );

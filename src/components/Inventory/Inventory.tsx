@@ -5,8 +5,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { crearProducto, agregarIngresoProducto, obtenerProductosConStockYAverage } from '../../lib/supabaseInventory';
 import { obtenerProveedores } from '../../lib/supabaseSuppliers';
-import { actualizarProducto, eliminarProducto, obtenerProductos } from '../../lib/supabaseProducts';
-import { Plus } from 'lucide-react';
+import { getStoreSettings } from '../../lib/supabaseSettings';
+import { actualizarProducto, eliminarProducto, obtenerProductos, archivarProducto } from '../../lib/supabaseProducts';
+import { Plus, TrendingUp, DollarSign, Wallet, Activity, AlertTriangle, Archive } from 'lucide-react';
 import { Product } from '../../types/inventory';
 import { useToast } from '../../contexts/ToastContext';
 import InventoryTable from './InventoryTable';
@@ -14,6 +15,7 @@ import InventoryHistoryModal from './InventoryHistoryModal';
 import PasswordModal from './PasswordModal';
 import { IngresoData } from './NewIngresoModal';
 import NewIngresoModal from './NewIngresoModal';
+import QuickPriceModal from './QuickPriceModal';
 import ProductForm from './ProductForm';
 import InventoryFilters from './InventoryFilters';
 import Pagination from './Pagination';
@@ -49,6 +51,7 @@ const Inventory: React.FC = () => {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [success, setSuccess] = useState(false);
   const [form, setForm] = useState<Partial<Product>>({});
+  const [storeSettings, setStoreSettings] = useState<any>(null);
 
   // Estados para modales
   const [showAddModal, setShowAddModal] = useState(false);
@@ -65,6 +68,16 @@ const Inventory: React.FC = () => {
   const [adjustStock_loading, setAdjustStock_loading] = useState(false);
   const [adjustStock_error, setAdjustStock_error] = useState<string | null>(null);
   const [loadingIngreso, setLoadingIngreso] = useState(false);
+  const [showQuickPriceModal, setShowQuickPriceModal] = useState(false);
+  const [productToQuickPrice, setProductToQuickPrice] = useState<Product | null>(null);
+  const [quickPriceLoading, setQuickPriceLoading] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [productToArchive, setProductToArchive] = useState<Product | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Estados para validación de PIN
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: 'adjustPrice' | 'delete' | 'adjustStock' | 'editForm', data: any } | null>(null);
 
   // Estado para filtros y paginación
   const [filters, setFilters] = useState<FilterValues>({
@@ -81,19 +94,21 @@ const Inventory: React.FC = () => {
     if (!tenant?.id) return;
     setCargandoProductos(true);
     try {
-      const [productosData, proveedoresData] = await Promise.all([
-        obtenerProductosConStockYAverage(tenant.id),
-        obtenerProveedores(tenant.id)
+      const [productosData, proveedoresData, settingsData] = await Promise.all([
+        obtenerProductosConStockYAverage(tenant.id, showArchived),
+        obtenerProveedores(tenant.id),
+        getStoreSettings(tenant.id)
       ]);
       setProductos(productosData);
       setProveedores(proveedoresData);
+      setStoreSettings(settingsData);
     } catch (err) {
       console.error('Error loading products:', err);
       showToast('Error al cargar los productos', 'error');
     } finally {
       setCargandoProductos(false);
     }
-  }, [showToast]);
+  }, [showToast, tenant?.id, showArchived]);
 
   // Cargar productos y proveedores al montar el componente
   useEffect(() => {
@@ -109,7 +124,12 @@ const Inventory: React.FC = () => {
 
     setSaving(true);
     try {
-      if (editProduct?.id && tenant?.id) {
+      if (!tenant?.id) {
+        showToast('Error: No se pudo identificar la bodega. Por favor recarga la página.', 'error');
+        return false;
+      }
+
+      if (editProduct?.id) {
         await actualizarProducto(editProduct.id, formData as Product, tenant.id);
         showToast('Producto actualizado correctamente', 'success');
       } else {
@@ -121,7 +141,7 @@ const Inventory: React.FC = () => {
             costPrice: Number(formData.costPrice) || 0,
             date: new Date().toISOString()
           },
-          tenant!.id
+          tenant.id
         );
         showToast('Producto creado correctamente', 'success');
       }
@@ -155,6 +175,22 @@ const Inventory: React.FC = () => {
     return matchesName && matchesCode && matchesCategory && matchesSupplier && matchesLowStock;
   });
 
+  // Cálculos de Inteligencia de Negocio
+  const insights = productos.reduce((acc, p) => {
+    const stock = Number(p.stock) || 0;
+    const cost = Number(p.averageCost) || 0;
+    const price = Number(p.salePrice) || 0;
+    const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
+
+    acc.totalValue += stock * cost;
+    acc.projectedProfit += stock * (price - cost);
+    if (stock <= (p.minStock || 0)) acc.lowStockCount++;
+    if (margin < 10 && price > 0) acc.lowMarginCount++;
+    if (stock <= 0) acc.outOfStockCount++;
+
+    return acc;
+  }, { totalValue: 0, projectedProfit: 0, lowStockCount: 0, lowMarginCount: 0, outOfStockCount: 0 });
+
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
@@ -173,6 +209,41 @@ const Inventory: React.FC = () => {
     setCurrentPage(1);
   }, []);
 
+  // Helper para verificar PIN antes de acciones críticas
+  const verifyAdminAction = (type: any, data: any) => {
+    if (storeSettings?.admin_password) {
+      setPendingAction({ type, data });
+      setShowSecurityModal(true);
+    } else {
+      // Si no hay PIN configurado, ejecutar acción directamente
+      executeProtectedAction(type, data);
+    }
+  };
+
+  const executeProtectedAction = (type: string, data: any) => {
+    switch (type) {
+      case 'editForm':
+        setForm({ ...data });
+        setEditProduct(data);
+        setSuccess(false);
+        setShowAddModal(true);
+        break;
+      case 'delete':
+        setProductToDelete(data);
+        setShowDeleteModal(true);
+        break;
+      case 'adjustStock':
+        setProductToAdjust(data);
+        setAdjustStock_newStock(data.stock || 0);
+        setShowAdjustStockModal(true);
+        break;
+      case 'adjustPrice':
+        setProductToQuickPrice(data);
+        setShowQuickPriceModal(true);
+        break;
+    }
+  };
+
   // Renderizado
   return (
     <div className="p-6 space-y-6 w-full max-w-full">
@@ -183,17 +254,63 @@ const Inventory: React.FC = () => {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Inventario</h1>
+        <div>
+          <h1 className="text-3xl font-heading font-black text-gray-900 dark:text-white">Inventario</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Gestiona tus productos y analiza tu rentabilidad</p>
+        </div>
         <button
           onClick={() => {
             setForm({ minStock: 5 });
             setEditProduct(null);
             setShowAddModal(true);
           }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition-colors"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 dark:shadow-none transition-all font-bold active:scale-95"
         >
-          <Plus size={18} /> Agregar producto
+          <Plus size={20} /> Agregar producto
         </button>
+      </div>
+
+      {/* Insights Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group hover:border-emerald-500/30 transition-colors">
+          <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
+            <Wallet size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight">Valor a Costo</p>
+            <p className="text-xl font-black text-gray-900 dark:text-white">S/. {insights.totalValue.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group hover:border-blue-500/30 transition-colors">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform">
+            <TrendingUp size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight">Ganancia Proyectada</p>
+            <p className="text-xl font-black text-blue-600 dark:text-blue-400">S/. {insights.projectedProfit.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group hover:border-amber-500/30 transition-colors">
+          <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl group-hover:scale-110 transition-transform">
+            <Activity size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight">Baja Rentabilidad</p>
+            <p className="text-xl font-black text-amber-600 dark:text-amber-400">{insights.lowMarginCount} Prod.</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group hover:border-red-500/30 transition-colors">
+          <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl group-hover:scale-110 transition-transform">
+            <AlertTriangle size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight">Sin Stock</p>
+            <p className="text-xl font-black text-red-600 dark:text-red-400">{insights.outOfStockCount} Agotados</p>
+          </div>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -206,6 +323,15 @@ const Inventory: React.FC = () => {
           barcodeInput={filters.code}
           proveedores={proveedores.map(p => p.name)}
         />
+
+      </div>
+
+      <div className="flex justify-end mb-4 px-2">
+        <label className="relative inline-flex items-center cursor-pointer group">
+          <input type="checkbox" className="sr-only peer" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
+          <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-emerald-600 transition-colors">Ver productos archivados</span>
+        </label>
       </div>
 
       {/* Tabla de inventario */}
@@ -213,21 +339,9 @@ const Inventory: React.FC = () => {
         <InventoryTable
           products={paginatedProducts}
           loading={cargandoProductos}
-          onEdit={(product) => {
-            setForm({ ...product });
-            setEditProduct(product);
-            setSuccess(false);
-            setShowAddModal(true);
-          }}
-          onDelete={(product) => {
-            setProductToDelete(product);
-            setShowDeleteModal(true);
-          }}
-          onAdjustStock={(product) => {
-            setProductToAdjust(product);
-            setAdjustStock_newStock(product.stock || 0);
-            setShowAdjustStockModal(true);
-          }}
+          onEdit={(product) => verifyAdminAction('editForm', product)}
+          onDelete={(product) => verifyAdminAction('delete', product)}
+          onAdjustStock={(product) => verifyAdminAction('adjustStock', product)}
           onShowHistory={(product) => {
             setHistoryProduct(product);
             setShowHistoryModal(true);
@@ -236,6 +350,7 @@ const Inventory: React.FC = () => {
             setProductToIngreso(product);
             setShowNewIngresoModal(true);
           }}
+          onQuickPrice={(product) => verifyAdminAction('adjustPrice', product)}
         />
 
         {/* Paginación */}
@@ -249,6 +364,29 @@ const Inventory: React.FC = () => {
       </div>
 
       {/* Modales */}
+
+      {/* Security Gate: Validación de PIN de Administrador */}
+      {showSecurityModal && (
+        <PasswordModal
+          isOpen={showSecurityModal}
+          title="Verificación de Administrador"
+          message="Ingresa la clave de administrador para realizar esta acción crítica."
+          actionLabel="Verificar"
+          correctPassword={storeSettings?.admin_password}
+          onClose={() => {
+            setShowSecurityModal(false);
+            setPendingAction(null);
+          }}
+          onConfirm={() => {
+            setShowSecurityModal(false);
+            if (pendingAction) {
+              executeProtectedAction(pendingAction.type, pendingAction.data);
+              setPendingAction(null);
+            }
+          }}
+        />
+      )}
+
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-gray-800 shadow-2xl">
@@ -272,30 +410,58 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de confirmación de eliminación */}
+      {/* Modal de confirmación de eliminación (Ya verificado por PIN) */}
       {showDeleteModal && productToDelete && (
-        <PasswordModal
-          isOpen={showDeleteModal}
-          actionLabel="Eliminar"
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={async () => {
-            try {
-              if (productToDelete.id && tenant?.id) {
-                await eliminarProducto(productToDelete.id, tenant.id);
-                showToast('Producto eliminado correctamente', 'success');
-                await cargarProductos();
-              }
-            } catch (err) {
-              console.error('Error deleting product:', err);
-              showToast('Error al eliminar el producto', 'error');
-            } finally {
-              setShowDeleteModal(false);
-              setProductToDelete(null);
-            }
-          }}
-          title="Confirmar eliminación"
-          message={`¿Estás seguro de eliminar el producto ${productToDelete.name}?`}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-gray-800 shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Confirmar Eliminación</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              ¿Estás seguro de eliminar el producto <span className="font-bold text-gray-900 dark:text-white">{productToDelete.name}</span>? Esta acción es irreversible.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (productToDelete.id && tenant?.id) {
+                      await eliminarProducto(productToDelete.id, tenant.id);
+                      showToast('Producto eliminado correctamente', 'success');
+                      await cargarProductos();
+                    }
+                  } catch (err) {
+                    console.error('Error deleting product:', err);
+                    const errorMessage = (err as any)?.message || 'Error desconocido al eliminar';
+
+                    if (errorMessage.includes('ventas registradas')) {
+                      setShowDeleteModal(false);
+                      setProductToArchive(productToDelete);
+                      setShowArchiveModal(true);
+                      return;
+                    }
+
+                    showToast(`Error al eliminar: ${errorMessage}`, 'error');
+                  } finally {
+                    if (!showArchiveModal) {
+                      setShowDeleteModal(false);
+                      setProductToDelete(null);
+                    }
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-bold shadow-lg shadow-red-200 dark:shadow-none"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showHistoryModal && historyProduct && (
@@ -402,11 +568,9 @@ const Inventory: React.FC = () => {
 
                     try {
                       if (productToAdjust.id) {
-                        // Calculate the difference in stock
                         const difference = adjustStock_newStock - (productToAdjust.stock || 0);
-                        const movementType = difference > 0 ? 'ingreso' : 'salida';
+                        const movementType = difference > 0 ? 'ingreso' : 'egreso';
 
-                        // Add the stock movement
                         await agregarIngresoProducto(
                           productToAdjust.id,
                           tenant!.id,
@@ -436,6 +600,124 @@ const Inventory: React.FC = () => {
                   {adjustStock_loading ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showQuickPriceModal && productToQuickPrice && (
+        <QuickPriceModal
+          isOpen={showQuickPriceModal}
+          onClose={() => setShowQuickPriceModal(false)}
+          product={productToQuickPrice}
+          loading={quickPriceLoading}
+          onSave={async (newPrice) => {
+            if (!productToQuickPrice.id || !tenant?.id) return;
+            setQuickPriceLoading(true);
+            try {
+              await actualizarProducto(productToQuickPrice.id, { ...productToQuickPrice, salePrice: newPrice }, tenant.id);
+              showToast('Precio actualizado correctamente', 'success');
+              setShowQuickPriceModal(false);
+              await cargarProductos();
+            } catch (err) {
+              console.error('Error al actualizar precio:', err);
+              showToast('Error al actualizar el precio', 'error');
+            } finally {
+              setQuickPriceLoading(false);
+            }
+          }}
+        />
+      )}
+
+      {showArchiveModal && productToArchive && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-gray-800 shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Archive size={32} />
+            </div>
+            <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Producto con Ventas</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              El producto <span className="font-bold text-gray-900 dark:text-white">{productToArchive.name}</span> tiene historial de ventas y no puede eliminarse.
+              <br /><br />
+              ¿Deseas <b>archivarlo</b>? Desaparecerá del POS pero mantendrá sus reportes históricos.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowArchiveModal(false);
+                  setProductToArchive(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (productToArchive.id && tenant?.id) {
+                      await archivarProducto(productToArchive.id, tenant.id);
+                      showToast('Producto archivado correctamente', 'success');
+                      await cargarProductos();
+                    }
+                  } catch (err) {
+                    console.error('Error archiving product:', err);
+                    showToast('Error al archivar el producto', 'error');
+                  } finally {
+                    setShowArchiveModal(false);
+                    setProductToArchive(null);
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-bold shadow-lg shadow-amber-200 dark:shadow-none"
+              >
+                Archivar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showArchiveModal && productToArchive && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-gray-800 shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Archive size={32} />
+            </div>
+            <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Producto con Ventas</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              El producto <span className="font-bold text-gray-900 dark:text-white">{productToArchive.name}</span> tiene historial de ventas y no puede eliminarse.
+              <br /><br />
+              ¿Deseas <b>archivarlo</b>? Desaparecerá del POS pero mantendrá sus reportes históricos.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowArchiveModal(false);
+                  setProductToArchive(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (productToArchive.id && tenant?.id) {
+                      await archivarProducto(productToArchive.id, tenant.id);
+                      showToast('Producto archivado correctamente', 'success');
+                      await cargarProductos();
+                    }
+                  } catch (err) {
+                    console.error('Error archiving product:', err);
+                    showToast('Error al archivar el producto', 'error');
+                  } finally {
+                    setShowArchiveModal(false);
+                    setProductToArchive(null);
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-bold shadow-lg shadow-amber-200 dark:shadow-none"
+              >
+                Archivar
+              </button>
             </div>
           </div>
         </div>

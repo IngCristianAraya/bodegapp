@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import './app/layout-fix.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { TenantProvider } from './contexts/TenantContext';
 import { CartProvider } from './contexts/CartContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { LowStockProvider } from './contexts/LowStockContext';
 import LoginForm from './components/Auth/LoginForm';
 import Navbar from './components/Layout/Navbar';
 import Dashboard from './components/Dashboard/Dashboard';
@@ -71,11 +73,15 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <ToastProvider>
-    <AuthProvider>
-      <CartProvider>
-        <AppContent />
-      </CartProvider>
-    </AuthProvider>
+    <TenantProvider>
+      <AuthProvider>
+        <LowStockProvider>
+          <CartProvider>
+            <AppContent />
+          </CartProvider>
+        </LowStockProvider>
+      </AuthProvider>
+    </TenantProvider>
   </ToastProvider>
 );
 

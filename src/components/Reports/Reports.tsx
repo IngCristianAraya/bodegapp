@@ -6,6 +6,7 @@ import ReportsMenu from './ReportsMenu';
 import InventoryMovementsReport from './InventoryMovementsReport';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
+import { getStoreSettings, StoreSettings } from '../../lib/supabaseSettings';
 import { useTenant } from '../../contexts/TenantContext';
 import { exportAllDataToCSV } from '../../lib/exportData';
 import { Sale, Product, SaleItem } from '../../types/index';
@@ -26,17 +27,20 @@ const Reports: React.FC = () => {
   const VENTAS_POR_PAGINA = 10;
   const INVENTARIO_POR_PAGINA = 10;
   const [loading, setLoading] = useState(false);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
 
   const cargarVentasYProductos = async (): Promise<void> => {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const [ventasData, productosData] = await Promise.all([
+      const [ventasData, productosData, settingsData] = await Promise.all([
         obtenerVentas(tenant.id),
-        obtenerProductos(tenant.id)
+        obtenerProductos(tenant.id, true), // Include archived products for reports
+        getStoreSettings(tenant.id)
       ]);
       setVentas(ventasData);
       setProductos(productosData);
+      setStoreSettings(settingsData);
     } finally {
       setLoading(false);
     }
@@ -46,7 +50,7 @@ const Reports: React.FC = () => {
     if (!tenant?.id) return;
     setLoading(true);
     try {
-      const productosData = await obtenerProductos(tenant.id);
+      const productosData = await obtenerProductos(tenant.id, true); // Include archived products
       setProductos(productosData);
     } finally {
       setLoading(false);
@@ -82,6 +86,13 @@ const Reports: React.FC = () => {
     setVentasPage(1);
     setInventarioPage(1);
   }, [reportType]);
+
+  // Re-cargar configuración cuando se abre el modal del ticket
+  useEffect(() => {
+    if (showTicketModal && tenant?.id) {
+      getStoreSettings(tenant.id).then(setStoreSettings);
+    }
+  }, [showTicketModal, tenant?.id]);
 
   function toCSV<T extends Record<string, unknown>>(rows: T[], headers: { key: string, label: string, format?: (val: unknown, row: T) => string }[]): string {
     const headerRow = headers.map(h => h.label).join(';');
@@ -523,7 +534,7 @@ const Reports: React.FC = () => {
             <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
               <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
                 <div ref={ticketRef} className="p-2">
-                  <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} />
+                  <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
                 </div>
               </div>
             </div>

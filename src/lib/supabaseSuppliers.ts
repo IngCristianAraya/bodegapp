@@ -11,6 +11,11 @@ export async function crearProveedor(data: Omit<Supplier, 'id'>, tenantId: strin
             phone: data.phone,
             email: data.email,
             address: data.address,
+            ruc: data.ruc,
+            delivery_days: data.deliveryDays,
+            rating: data.rating,
+            notes: data.notes,
+            category: data.category,
             created_at: new Date().toISOString()
         }])
         .select()
@@ -44,18 +49,29 @@ export async function obtenerProveedores(tenantId: string): Promise<Supplier[]> 
         phone: item.phone,
         email: item.email,
         address: item.address,
+        ruc: item.ruc,
+        deliveryDays: item.delivery_days || [],
+        rating: item.rating || 0,
+        notes: item.notes,
+        category: item.category,
         products: [],
         createdAt: new Date(item.created_at)
     }));
 }
 
 export async function actualizarProveedor(id: string, data: Partial<Supplier>, tenantId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
     if (data.name) updateData.name = data.name;
     if (data.contact) updateData.contact = data.contact;
     if (data.phone) updateData.phone = data.phone;
     if (data.email) updateData.email = data.email;
     if (data.address) updateData.address = data.address;
+    if (data.ruc) updateData.ruc = data.ruc;
+    if (data.deliveryDays) updateData.delivery_days = data.deliveryDays;
+    if (data.rating !== undefined) updateData.rating = data.rating;
+    if (data.notes) updateData.notes = data.notes;
+    if (data.category) updateData.category = data.category;
 
     const { error } = await supabase
         .from('suppliers')

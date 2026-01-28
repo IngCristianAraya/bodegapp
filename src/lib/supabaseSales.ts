@@ -46,29 +46,41 @@ export async function obtenerVentas(tenantId: string): Promise<Sale[]> {
 export async function crearVenta(sale: Sale, tenantId: string): Promise<string> {
     const { items, ...saleHeader } = sale;
 
+    // VALIDACIÓN CRÍTICA: customer_id debe ser un UUID válido o NULL (no string vacío)
+    const cleanCustomerId = (saleHeader.customerId && saleHeader.customerId.trim() !== '')
+        ? saleHeader.customerId
+        : null;
+
     const { data: newSale, error: saleError } = await supabase
         .from('sales')
         .insert([{
-            id: saleHeader.id,
             tenant_id: tenantId,
             receipt_number: saleHeader.receiptNumber,
             cashier_id: saleHeader.cashierId,
-            cashier_name: saleHeader.cashierName,
-            customer_id: saleHeader.customerId || null,
+            cashier_name: saleHeader.cashier_name || saleHeader.cashierName,
+            customer_id: cleanCustomerId,
             customer_name: saleHeader.customerName,
             total: saleHeader.total,
             subtotal: saleHeader.subtotal,
             discount: saleHeader.discount,
             tax: saleHeader.tax,
             payment_method: saleHeader.paymentMethod,
-            created_at: saleHeader.createdAt instanceof Date
+            created_at: (saleHeader.createdAt instanceof Date)
                 ? saleHeader.createdAt.toISOString()
                 : (saleHeader.createdAt || new Date().toISOString())
         }])
         .select()
         .single();
 
-    if (saleError) throw saleError;
+    if (saleError) {
+        console.error('Error in sales header insert (detallado):', JSON.stringify(saleError, null, 2));
+        throw new Error(`Base de Datos: ${saleError.message || 'Error desconocido'} (${saleError.code})`);
+    }
+
+    if (!newSale) {
+        throw new Error('No se pudo crear el encabezado de la venta (data vacía tras insert).');
+    }
+
     const saleId = newSale.id;
 
     if (items && items.length > 0) {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, ShoppingCart, Package, Truck, BarChart3, Settings, LogOut, CircleAlert } from 'lucide-react';
+import { useLowStock } from '../../contexts/LowStockContext';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -18,6 +19,15 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) => {
+  // Use try-catch to handle case where context might not be available
+  let criticalStockCount = 0;
+  try {
+    const lowStockContext = useLowStock();
+    criticalStockCount = lowStockContext.criticalStockCount;
+  } catch (error) {
+    // Context not available yet, use default value
+    console.warn('LowStockContext not available in Navbar');
+  }
   return (
     <nav className="fixed top-4 left-4 right-4 z-50 rounded-2xl glass shadow-lg border border-white/20 dark:border-white/10 dark:bg-slate-900/80">
       <div className="w-full px-6 flex items-center justify-between h-18">
@@ -50,6 +60,11 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
                   >
                     <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-emerald-600 dark:text-white' : ''} />
                     <span className="text-sm hidden sm:inline-block">{item.label}</span>
+                    {item.id === 'lowstock' && criticalStockCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
+                        {criticalStockCount}
+                      </span>
+                    )}
                   </button>
                 </li>
               );

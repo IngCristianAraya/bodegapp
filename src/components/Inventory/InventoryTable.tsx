@@ -1,7 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Product } from '../../types/inventory';
-import { Pencil, Trash2, Wrench, History, PlusCircle, FileSpreadsheet, FileText, Package } from 'lucide-react';
+import { Pencil, Trash2, Wrench, History, PlusCircle, FileSpreadsheet, FileText, Package, Zap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,10 +13,11 @@ interface InventoryTableProps {
   onShowHistory?: (product: Product) => void;
   onAdjustStock?: (product: Product) => void;
   onNewIngreso?: (product: Product) => void;
+  onQuickPrice?: (product: Product) => void;
   loading?: boolean;
 }
 
-const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDelete, onShowHistory, onAdjustStock, onNewIngreso, loading }) => {
+const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDelete, onShowHistory, onAdjustStock, onNewIngreso, onQuickPrice, loading }) => {
   // Exportar a Excel
   const handleExportExcel = () => {
     const data = products.map(p => ({
@@ -39,17 +40,21 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDel
     const doc = new jsPDF();
     autoTable(doc, {
       head: [[
-        'Nombre', 'Código', 'Categoría', 'Proveedor', 'Stock', 'Costo Promedio', 'Precio Venta'
+        'Nombre', 'Código', 'Categoría', 'Proveedor', 'Stock', 'Costo Promedio', 'Precio Venta', 'Margen %'
       ]],
-      body: products.map(p => [
-        p.name,
-        p.code,
-        p.category,
-        p.supplier,
-        p.stock,
-        p.averageCost?.toFixed(2) ?? '0.00',
-        typeof p.salePrice === 'number' ? p.salePrice.toFixed(2) : '-'
-      ]),
+      body: products.map(p => {
+        const margin = p.salePrice > 0 ? ((p.salePrice - (p.averageCost || 0)) / p.salePrice) * 100 : 0;
+        return [
+          p.name,
+          p.code,
+          p.category,
+          p.supplier,
+          p.stock,
+          p.averageCost?.toFixed(2) ?? '0.00',
+          typeof p.salePrice === 'number' ? p.salePrice.toFixed(2) : '-',
+          margin.toFixed(2) + '%'
+        ];
+      }),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [16, 185, 129] }, // emerald
       margin: { top: 20 }
@@ -87,6 +92,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDel
               <th className="px-6 py-4">Proveedor</th>
               <th className="px-6 py-4 text-right">Stock</th>
               <th className="px-6 py-4 text-right">Precios</th>
+              <th className="px-6 py-4 text-center">Margen</th>
               <th className="px-6 py-4 text-center">Acciones</th>
             </tr>
           </thead>
@@ -153,6 +159,20 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDel
                         <span className="text-xs text-gray-400 dark:text-gray-500">Costo: S/. {product.averageCost?.toFixed(2) ?? '0.00'}</span>
                       </div>
                     </td>
+                    <td className="px-6 py-3 text-center">
+                      {(() => {
+                        const margin = product.salePrice > 0 ? ((product.salePrice - (product.averageCost || 0)) / product.salePrice) * 100 : 0;
+                        let colorClass = 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20';
+                        if (margin < 5) colorClass = 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
+                        else if (margin < 15) colorClass = 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20';
+
+                        return (
+                          <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${colorClass}`}>
+                            {margin.toFixed(1)}%
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                         <button
@@ -168,6 +188,13 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDel
                           onClick={() => onNewIngreso && onNewIngreso(product)}
                         >
                           <PlusCircle size={16} />
+                        </button>
+                        <button
+                          className="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:scale-110 transition-transform"
+                          title="Ajustar precio"
+                          onClick={() => onQuickPrice && onQuickPrice(product)}
+                        >
+                          <Zap size={16} />
                         </button>
                         <button
                           className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:scale-110 transition-transform"

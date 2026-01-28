@@ -1,5 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
+import { Barcode } from 'lucide-react';
 import { Product } from '../../types/inventory';
 import { categoryData } from '@/lib/constants/categoryData';
 import SubcategorySelect from './SubcategorySelect';
@@ -178,15 +179,22 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
         <div className="flex flex-col">
-          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Código</label>
-          <input
-            type="text"
-            placeholder="Código del producto"
-            className={inputClass}
-            value={form.code || ''}
-            onChange={e => setForm({ ...form, code: e.target.value })}
-            required
-          />
+          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+            Código / Código de Barras
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Escanea o escribe el código"
+              className={`${inputClass} !pl-10`}
+              value={form.code || ''}
+              onChange={e => setForm({ ...form, code: e.target.value })}
+              required
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <Barcode size={18} />
+            </div>
+          </div>
         </div>
         <div className="flex flex-col">
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Categoría</label>

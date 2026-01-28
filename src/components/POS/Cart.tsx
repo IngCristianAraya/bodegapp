@@ -92,19 +92,25 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
                 </div>
 
                 <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-900 rounded-lg p-1">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="text-xs font-bold w-4 text-center text-gray-800 dark:text-white">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400"
-                  >
-                    <Plus size={14} />
-                  </button>
+                  {!item.product.ventaPorPeso && (
+                    <button
+                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                      className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-50"
+                    >
+                      <Minus size={14} />
+                    </button>
+                  )}
+                  <span className={`text-xs font-bold text-center text-gray-800 dark:text-white ${item.product.ventaPorPeso ? 'px-2 w-auto' : 'w-4'}`}>
+                    {item.product.ventaPorPeso ? `${item.quantity.toFixed(3)} kg` : item.quantity}
+                  </span>
+                  {!item.product.ventaPorPeso && (
+                    <button
+                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                      className="w-6 h-6 flex items-center justify-center bg-white dark:bg-slate-700 rounded-md shadow-sm text-gray-600 dark:text-gray-300 hover:text-emerald-500 dark:hover:text-emerald-400"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
                 </div>
 
                 <div className="text-right">

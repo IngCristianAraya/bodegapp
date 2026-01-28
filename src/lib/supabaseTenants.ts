@@ -5,18 +5,29 @@ import { supabase } from './supabase';
  * Útil para el middleware o para cargar la configuración inicial de la tienda.
  */
 export async function getTenantBySubdomain(subdomain: string) {
-    const { data, error } = await supabase
+    console.log('--- Supabase Debug: getTenantBySubdomain START ---');
+    console.log('Searching for subdomain:', subdomain);
+
+    const { data, error, status, statusText } = await supabase
         .from('tenants')
         .select('*')
-        .eq('subdomain', subdomain)
-        .single();
+        .eq('subdomain', subdomain);
+
+    console.log('Supabase Response Raw:', { data, error, status, statusText });
 
     if (error) {
-        console.error('Error fetching tenant:', error);
+        console.error('CRITICAL: Supabase Error fetching tenant:', error);
         return null;
     }
 
-    return data;
+    if (!data || data.length === 0) {
+        console.warn('WARNING: No tenant found in DB for subdomain:', subdomain);
+        return null;
+    }
+
+    console.log('SUCCESS: Tenant found:', data[0]);
+    console.log('--- Supabase Debug: getTenantBySubdomain END ---');
+    return data[0];
 }
 
 /**

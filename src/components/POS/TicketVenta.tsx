@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
-
+import { StoreSettings } from '@/lib/supabaseSettings';
+import Image from 'next/image';
 
 interface TicketVentaProps {
   venta: {
@@ -14,91 +15,81 @@ interface TicketVentaProps {
     igv: number;
     total: number;
   };
+  settings?: StoreSettings | null;
 }
 
 // Componente imprimible (forwardRef para react-to-print)
-const TicketVenta = forwardRef<HTMLDivElement, TicketVentaProps>(({ venta }, ref) => {
-  // Leer datos de la tienda desde localStorage
-  let storeInfo = { businessName: 'BODEGA APP', ruc: '12345678901', address: 'Av. Principal 123 - Lima' };
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('storeInfo');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        storeInfo = {
-          businessName: parsed.businessName || storeInfo.businessName,
-          ruc: parsed.ruc || storeInfo.ruc,
-          address: parsed.address || storeInfo.address,
-        };
-      } catch {}
-    }
-  }
+const TicketVenta = forwardRef<HTMLDivElement, TicketVentaProps>(({ venta, settings }, ref) => {
+  // Datos prioritarios desde Supabase, fallback a genéricos
+  const businessName = settings?.business_name || 'BODEGA APP';
+  const ruc = settings?.ruc || '---';
+  const address = settings?.address || '---';
+  const email = settings?.email;
+  const phone = settings?.phone;
+  const logoUrl = settings?.logo_url;
+  const footer = settings?.ticket_footer || '¡Gracias por su compra!';
+
   return (
-    <div ref={ref} id="ticket-pdf-capture" style={{ width: '58mm', minHeight: 'auto', fontFamily: 'Arial, sans-serif', fontSize: '12px', padding: 0, margin: '0 auto', background: 'white' }} className="ticket-pdf-safe">
-      <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px' }}>{storeInfo.businessName}</div>
-      <div className="text-xs" style={{ fontSize: '10px' }}>RUC: {storeInfo.ruc}</div>
-      <div className="text-xs" style={{ fontSize: '10px' }}>{storeInfo.address}</div>
-      <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13px' }}>BOLETA DE VENTA</div>
-      <div className="text-xs" style={{ fontSize: '10px' }}>N°: <b>{venta.receiptNumber}</b></div>
-      <div className="flex justify-between mb-1" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '10px', maxWidth: '100%' }}>
-        <span>Cajero:</span>
-        <span>{venta.cashierName}</span>
+    <div ref={ref} id="ticket-pdf-capture" style={{ width: '58mm', minHeight: 'auto', fontFamily: 'monospace', fontSize: '12px', padding: '15px 10px', margin: '0 auto', background: 'white', color: 'black' }} className="ticket-print-safe">
+      {/* Header Centered with Flexbox */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '12px' }}>
+        {logoUrl && (
+          <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <img src={logoUrl} alt="Logo" style={{ maxHeight: '50px', maxWidth: '90%', objectFit: 'contain' }} />
+          </div>
+        )}
+        <div style={{ fontWeight: 'bold', fontSize: '16px', textTransform: 'uppercase', lineHeight: '1.2', marginBottom: '2px' }}>{businessName}</div>
+        <div style={{ fontSize: '11px', color: '#333' }}>RUC: {ruc}</div>
+        {address && <div style={{ fontSize: '11px', color: '#333' }}>{address}</div>}
       </div>
-      {venta.customerName && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-          <span>Cliente:</span>
-          <span>{venta.customerName}</span>
+
+      <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '6px 0', margin: '8px 0', textAlign: 'center' }}>
+        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>BOLETA DE VENTA</div>
+        <div style={{ fontSize: '11px' }}>N°: {venta.receiptNumber}</div>
+      </div>
+
+      <div style={{ fontSize: '10px', marginBottom: '10px', textTransform: 'uppercase' }}>
+        <div className="flex justify-between"><span>FECHA:</span> <span>{venta.date}</span></div>
+        <div className="flex justify-between"><span>CAJERO:</span> <span>{venta.cashierName}</span></div>
+        <div className="flex justify-between"><span>PAGO:</span> <span>{venta.paymentMethod}</span></div>
+        {venta.customerName && (
+          <div className="flex justify-between"><span>CLIENTE:</span> <span>{venta.customerName}</span></div>
+        )}
+      </div>
+
+      <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10px', marginBottom: '10px' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #000' }}>
+            <th style={{ textAlign: 'left', paddingBottom: '4px' }}>CANT</th>
+            <th style={{ textAlign: 'left', paddingBottom: '4px' }}>PRODUCTO</th>
+            <th style={{ textAlign: 'right', paddingBottom: '4px' }}>TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {venta.items.map((item, idx) => (
+            <tr key={idx}>
+              <td style={{ verticalAlign: 'top', paddingTop: '4px' }}>{item.quantity}</td>
+              <td style={{ verticalAlign: 'top', paddingTop: '4px', paddingRight: '4px' }}>{item.productName}</td>
+              <td style={{ verticalAlign: 'top', paddingTop: '4px', textAlign: 'right' }}>{(item.quantity * item.unitPrice).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div style={{ borderTop: '1px dashed #000', paddingTop: '5px', fontSize: '11px' }}>
+        <div className="flex justify-between"><span>SUBTOTAL:</span> <span>S/ {venta.subtotal.toFixed(2)}</span></div>
+        {venta.discount > 0 && (
+          <div className="flex justify-between" style={{ color: 'red' }}><span>DSCTO:</span> <span>-S/ {venta.discount.toFixed(2)}</span></div>
+        )}
+        <div className="flex justify-between"><span>IGV:</span> <span>S/ {venta.igv.toFixed(2)}</span></div>
+        <div className="flex justify-between" style={{ fontWeight: 'bold', fontSize: '15px', marginTop: '6px', borderTop: '1px solid #000', paddingTop: '4px' }}>
+          <span>TOTAL:</span> <span>S/ {venta.total.toFixed(2)}</span>
         </div>
-      )}
-      <div className="flex justify-between mb-1" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '10px', maxWidth: '100%' }}>
-        <span>Fecha:</span>
-        <span>{venta.date}</span>
       </div>
-      <div className="flex justify-between mb-1" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '10px', maxWidth: '100%' }}>
-        <span>Pago:</span>
-        <span>{venta.paymentMethod}</span>
+
+      <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '20px', borderTop: '1px dashed #000', paddingTop: '10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+        {footer}
       </div>
-      <hr className="my-2" />
-      <table className="w-full" style={{ borderSpacing: 0, fontSize: '10px' }}>
-  <thead>
-    <tr>
-      <th className="text-left font-semibold pb-1 border-b border-gray-300">Cant</th>
-      <th className="text-left font-semibold pb-1 border-b border-gray-300">Descripción</th>
-      <th className="text-right font-semibold pb-1 border-b border-gray-300">P. Unit</th>
-      <th className="text-right font-semibold pb-1 border-b border-gray-300">Importe</th>
-    </tr>
-  </thead>
-  <tbody>
-    {venta.items.map((item, idx) => (
-      <tr key={idx}>
-        <td className="align-top pr-2" style={{ width: 30 }}>{item.quantity}</td>
-        <td className="align-top" style={{ maxWidth: 120, wordBreak: 'break-all', paddingRight: 2 }}>{item.productName}</td>
-        <td className="align-top text-right pr-2" style={{ width: 45 }}>S/. {item.unitPrice.toFixed(2)}</td>
-        <td className="align-top text-right" style={{ width: 55 }}>S/. {(item.quantity * item.unitPrice).toFixed(2)}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-      <hr className="my-2" />
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px', margin: 0 }}>
-  <span>Subtotal:</span>
-  <span>S/. {venta.subtotal.toFixed(2)}</span>
-</div>
-      {venta.discount > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px', margin: 0 }}>
-  <span>Descuento:</span>
-  <span>- S/. {venta.discount.toFixed(2)}</span>
-</div>
-      )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px', margin: 0 }}>
-  <span>IGV:</span>
-  <span>S/. {venta.igv.toFixed(2)}</span>
-</div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 2px', margin: 0, fontWeight: 'bold', fontSize: '1rem', marginTop: 4 }}>
-  <span>Total:</span>
-  <span>S/. {venta.total.toFixed(2)}</span>
-</div>
-      <div style={{ textAlign: 'center', fontSize: '10px', marginTop: 8 }}>¡Gracias por su compra!</div>
     </div>
   );
 });

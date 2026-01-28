@@ -1,206 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import { saveStoreInfo, getStoreInfo } from '../../lib/supabaseSettings';
-import { useToast } from '../../contexts/ToastContext';
-import { useTenant } from '../../contexts/TenantContext';
+import React, { useState } from 'react';
+import { FiTool, FiSettings, FiDollarSign, FiInfo } from 'react-icons/fi';
+import SettingsPanel from './SettingsPanel';
 import HowToUseSystem from './HowToUseSystem';
 import ExportDataButton from './ExportDataButton';
-import { FiSave, FiHome, FiFileText, FiInfo, FiSettings, FiTool, FiDollarSign } from 'react-icons/fi';
-
-// Tipo para los datos de la empresa/tienda
-export interface StoreInfo {
-  businessName: string;
-  ruc: string;
-  address: string;
-}
-
-const STORAGE_KEY = 'storeInfo';
 
 const Settings: React.FC = () => {
-  const [storeInfo, setStoreInfo] = useState<StoreInfo>({
-    businessName: '',
-    ruc: '',
-    address: '',
-  });
-  const [saved, setSaved] = useState(false);
-  const { showToast } = useToast();
-  const { tenant } = useTenant();
-  const [loading, setLoading] = useState(true);
-
-  // Al montar, intenta cargar desde Supabase basado en tenant
-  useEffect(() => {
-    const fetchData = async () => {
-      if (tenant?.id) {
-        setLoading(true);
-        try {
-          const info = await getStoreInfo(tenant.id);
-          if (info) {
-            setStoreInfo(info);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
-          } else {
-            const savedInfo = localStorage.getItem(STORAGE_KEY);
-            if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
-          }
-        } catch {
-          const savedInfo = localStorage.getItem(STORAGE_KEY);
-          if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        const savedInfo = localStorage.getItem(STORAGE_KEY);
-        if (savedInfo) setStoreInfo(JSON.parse(savedInfo));
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [tenant?.id]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStoreInfo({ ...storeInfo, [e.target.name]: e.target.value });
-    setSaved(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(storeInfo));
-    if (tenant?.id) {
-      try {
-        await saveStoreInfo(tenant.id, storeInfo);
-        showToast('Datos guardados en la nube', 'success');
-        setSaved(true);
-      } catch {
-        showToast('Error al guardar en la nube', 'error');
-      }
-    } else {
-      showToast('¡Datos guardados localmente! (Identifica tu tienda para guardar en nube)');
-      setSaved(true);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-600"></div>
-      </div>
-    );
-  }
+  const [activeTab, setActiveTab] = useState<'branding' | 'tools'>('branding');
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="glass-card rounded-2xl shadow-xl overflow-hidden bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
-          <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg text-emerald-600 dark:text-emerald-400">
-              <FiSettings />
-            </div>
-            Configuración de la Tienda
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 ml-11">Personaliza la información de tu negocio para los tickets</p>
-        </div>
-
-        <div className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <FiHome className="text-emerald-500" />
-                  Nombre Comercial
-                </label>
-                <input
-                  type="text"
-                  name="businessName"
-                  value={storeInfo.businessName}
-                  onChange={handleChange}
-                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-all"
-                  placeholder="Ej: Mi Bodega Pro"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <FiFileText className="text-emerald-500" />
-                  RUC
-                </label>
-                <input
-                  type="text"
-                  name="ruc"
-                  value={storeInfo.ruc}
-                  onChange={handleChange}
-                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-all"
-                  placeholder="11 dígitos"
-                  required
-                  pattern="[0-9]{11}"
-                  title="El RUC debe tener 11 dígitos"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <FiInfo className="text-emerald-500" />
-                  Dirección
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={storeInfo.address}
-                  onChange={handleChange}
-                  className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-600 px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-all"
-                  placeholder="Dirección del local"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
-              {saved && (
-                <span className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mr-4 animate-in fade-in">
-                  ¡Cambios guardados correctamente!
-                </span>
-              )}
-              <button
-                type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-emerald-200 dark:shadow-emerald-900/20 flex items-center gap-2 active:scale-95"
-              >
-                <FiSave />
-                Guardar Configuración
-              </button>
-            </div>
-          </form>
-        </div>
+    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 p-1.5 bg-gray-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-fit border border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setActiveTab('branding')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeTab === 'branding'
+            ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+        >
+          <FiSettings />
+          Personalización
+        </button>
+        <button
+          onClick={() => setActiveTab('tools')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeTab === 'tools'
+            ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+        >
+          <FiTool />
+          Herramientas del Sistema
+        </button>
       </div>
 
-      <div className="glass-card rounded-2xl shadow-xl overflow-hidden bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
-          <h2 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
-              <FiTool />
-            </div>
-            Herramientas del Sistema
-          </h2>
-        </div>
+      {/* Content Area */}
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {activeTab === 'branding' ? (
+          <SettingsPanel />
+        ) : (
+          <div className="space-y-8">
+            <div className="glass-card rounded-[2rem] shadow-xl overflow-hidden bg-white/50 dark:bg-slate-900/50 border border-white/20">
+              <div className="p-8 border-b border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-2xl text-blue-600 dark:text-blue-400">
+                    <FiTool />
+                  </div>
+                  Gestión de Datos y Ayuda
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">Herramientas avanzadas para el mantenimiento de tu negocio.</p>
+              </div>
 
-        <div className="p-8">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-              <h3 className="font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
-                <FiDollarSign className="text-emerald-500" />
-                Control de Datos
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Exporta tu base de datos completa</p>
-              <ExportDataButton />
-            </div>
+              <div className="p-8 grid md:grid-cols-2 gap-8">
+                <div className="bg-white/80 dark:bg-slate-800/80 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
+                    <FiDollarSign className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Exportación Completa</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                    Descarga toda tu base de datos de productos, ventas y clientes en formato Excel/CSV para tu contabilidad local.
+                  </p>
+                  <ExportDataButton />
+                </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-              <h3 className="font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
-                <FiInfo className="text-blue-500" />
-                Ayuda y Documentación
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Aprende a usar el sistema correctamente</p>
-              <HowToUseSystem />
+                <div className="bg-white/80 dark:bg-slate-800/80 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all group">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                    <FiInfo className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Guía de Usuario</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                    ¿Tienes dudas sobre cómo usar el sistema? Accede a nuestra documentación interactiva para aprender a dominar BodegApp.
+                  </p>
+                  <HowToUseSystem />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

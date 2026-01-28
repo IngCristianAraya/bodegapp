@@ -43,13 +43,19 @@ export async function crearProducto(producto: Partial<Product>, tenantId: string
     return data;
 }
 
-export async function obtenerProductos(tenantId: string) {
+export async function obtenerProductos(tenantId: string, includeArchived: boolean = false) {
     if (!tenantId) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('products')
         .select('*')
         .eq('tenant_id', tenantId);
+
+    if (!includeArchived) {
+        query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error obteniendo productos:', error);
@@ -77,8 +83,60 @@ export async function obtenerProductos(tenantId: string) {
         isExonerated: !!item.is_exonerated,
         igvIncluded: item.igv_included ?? true,
         ventaPorPeso: !!item.venta_por_peso,
+        isActive: item.is_active ?? true,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
+    }));
+}
+
+export async function archivarProducto(id: string, tenantId: string) {
+    const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
+
+    if (error) {
+        console.error('Error archivando producto:', error);
+        throw new Error(`Error al archivar el producto: ${error.message}`);
+    }
+}
+
+export async function reactivarProducto(id: string, tenantId: string) {
+    const { error } = await supabase
+        .from('products')
+        .update({ is_active: true })
+        .eq('id', id)
+        .eq('tenant_id', tenantId);
+
+    if (error) {
+        console.error('Error reactivando producto:', error);
+        throw new Error(`Error al reactivar el producto: ${error.message}`);
+    }
+}
+
+export async function obtenerProductosPorProveedor(tenantId: string, supplierName: string) {
+    if (!tenantId || !supplierName) return [];
+
+    const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .ilike('supplier', `%${supplierName}%`); // Búsqueda flexible
+
+    if (error) {
+        console.error('Error obteniendo productos por proveedor:', error);
+        return [];
+    }
+
+    return data.map((item: any) => ({
+        id: item.id,
+        name: item.name || '',
+        code: item.code || '',
+        stock: Number(item.stock) || 0,
+        minStock: Number(item.min_stock) || 0,
+        costPrice: Number(item.cost_price) || 0,
+        category: item.category || ''
     }));
 }
 
@@ -111,6 +169,35 @@ export async function actualizarProducto(id: string, data: Partial<Product>, ten
 }
 
 export async function eliminarProducto(id: string, tenantId: string) {
+    // 1. Verificar si hay ventas asociadas
+    const { count: salesCount, error: salesError } = await supabase
+        .from('sale_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('product_id', id)
+        .eq('tenant_id', tenantId);
+
+    if (salesError) {
+        console.error('Error verificando ventas al eliminar producto:', salesError);
+        throw new Error('Error al verificar ventas asociadas');
+    }
+
+    if (salesCount && salesCount > 0) {
+        throw new Error('No se puede eliminar el producto porque tiene ventas registradas. Considere desactivarlo o editarlo.');
+    }
+
+    // 2. Eliminar movimientos de inventario asociados (Si no hay ventas, es seguro borrar el historial de stock de este producto "fantasma")
+    const { error: stockError } = await supabase
+        .from('inventory_movements')
+        .delete()
+        .eq('product_id', id)
+        .eq('tenant_id', tenantId);
+
+    if (stockError) {
+        console.error('Error eliminando movimientos de inventario:', stockError);
+        throw new Error('Error al limpiar el historial de inventario del producto');
+    }
+
+    // 3. Eliminar el producto final
     const { error } = await supabase
         .from('products')
         .delete()
@@ -119,7 +206,7 @@ export async function eliminarProducto(id: string, tenantId: string) {
 
     if (error) {
         console.error('Error eliminando producto:', error);
-        throw error;
+        throw new Error(`Error al eliminar el producto: ${error.message}`);
     }
 }
 

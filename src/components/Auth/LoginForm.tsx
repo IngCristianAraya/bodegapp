@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, ShoppingBag } from 'lucide-react';
+import { Eye, EyeOff, ShoppingBag, Lock, Mail, ChevronRight, ShieldCheck, ArrowLeft, Send } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm: React.FC = () => {
@@ -8,112 +8,216 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [mode, setMode] = useState<'login' | 'reset'>('login');
 
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
+
     try {
-      await login(email, password);
-    } catch (error: unknown) {
-      let message = "Ocurrió un error al iniciar sesión.";
-      if (error instanceof Error && error.message) {
-        if (error.message.includes("auth/user-not-found")) message = "Usuario no encontrado. Verifica el correo electrónico.";
-        else if (error.message.includes("auth/wrong-password")) message = "Contraseña incorrecta.";
-        else if (error.message.includes("auth/invalid-email")) message = "Correo electrónico inválido.";
-        else if (error.message.includes("auth/user-disabled")) message = "Usuario deshabilitado.";
-        else message = error.message;
+      if (mode === 'login') {
+        await login(email, password);
+      } else {
+        await resetPassword(email);
+        setSuccessMessage("¡Enlace enviado! Revisa tu correo electrónico para restablecer tu clave.");
       }
-      setError(message);
+    } catch (error: unknown) {
+      console.error("Auth error:", error);
+      setError(error instanceof Error ? error.message : "Error en la autenticación.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
-            <ShoppingBag className="w-8 h-8 text-emerald-600" />
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden mesh-background p-4 md:p-6">
+      {/* Elementos decorativos de fondo para profundidad */}
+      <div className="absolute top-[-10%] left-[-5%] w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+      <div className="w-full max-w-lg relative z-10">
+        <div className="glass-card rounded-[2.5rem] overflow-hidden border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl bg-slate-900/40">
+          <div className="p-8 md:p-12">
+            {/* Header dinámico */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-400 rounded-2xl shadow-xl shadow-emerald-500/20 mb-6 rotate-3 hover:rotate-0 transition-transform duration-500">
+                {mode === 'login' ? <ShoppingBag className="w-10 h-10 text-white" /> : <Lock className="w-10 h-10 text-white" />}
+              </div>
+              <h1 className="text-4xl font-black text-white tracking-tight">
+                {mode === 'login' ? 'BodegApp ' : 'Nueva '}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-300">
+                  {mode === 'login' ? 'Pro' : 'Clave'}
+                </span>
+              </h1>
+              <p className="text-emerald-100/60 mt-3 font-medium tracking-wide">
+                {mode === 'login' ? 'Gestión Inteligente de Abarrotes' : 'Recupera el acceso a tu bodega'}
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-8 p-4 bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex-shrink-0 w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-red-200" />
+                </div>
+                <p className="text-red-100 text-sm font-medium">{error}</p>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="mb-8 p-4 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                  <Send className="w-5 h-5 text-emerald-200" />
+                </div>
+                <p className="text-emerald-50 text-sm font-medium">{successMessage}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-7">
+              {/* Input Email - Siempre visible */}
+              <div className="space-y-2.5">
+                <label className="text-sm font-bold text-white/90 ml-1 tracking-wide uppercase">
+                  Identidad Digital
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-emerald-100/40 group-focus-within:text-emerald-400 transition-colors" />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
+                    className="block w-full pl-12 pr-5 py-4.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-emerald-100/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 focus:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+                    placeholder="tu@bodega.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Input Password - Solo en modo login */}
+              {mode === 'login' && (
+                <div className="space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-sm font-bold text-white/90 tracking-wide uppercase">
+                      Clave de Acceso
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setMode('reset'); setError(""); setSuccessMessage(""); }}
+                      className="text-xs font-black text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                      ¿Nueva clave?
+                    </button>
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-emerald-100/40 group-focus-within:text-emerald-400 transition-colors" />
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
+                      className="block w-full pl-12 pr-12 py-4.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-emerald-100/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500/50 focus:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+                      placeholder="••••••••"
+                      required={mode === 'login'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/30 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full relative group overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4.5 rounded-2xl font-black shadow-2xl shadow-emerald-900/20 flex items-center justify-center gap-3 transition-all duration-300 hover:shadow-emerald-500/25 active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
+                >
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span className="tracking-widest uppercase text-sm">Procesando...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="tracking-widest uppercase text-sm">
+                        {mode === 'login' ? 'Entrar al Sistema' : 'Enviar Instrucciones'}
+                      </span>
+                      {mode === 'login' ? (
+                        <ChevronRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                      ) : (
+                        <Send className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
+                      )}
+                    </>
+                  )}
+                </button>
+
+                {mode === 'reset' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('login'); setError(""); setSuccessMessage(""); }}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-emerald-100/40 hover:text-emerald-400 transition-colors font-bold text-xs uppercase tracking-widest"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Volver al inicio
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Footer dinámico con CTA de Registro */}
+            <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-3 w-full">
+                <p className="text-emerald-100/40 text-[10px] font-bold uppercase tracking-[0.2em]">¿Nuevo en BodegApp?</p>
+                <a
+                  href="/register"
+                  className="text-xs font-black text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-6 py-2.5 rounded-full border border-emerald-500/20 uppercase tracking-widest"
+                >
+                  Abrir mi Bodega PRO
+                </a>
+              </div>
+
+              <div className="flex items-center gap-2 px-5 py-2.5 bg-white/5 rounded-full border border-white/5 mt-4">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                <span className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">SaaS Cloud Edition</span>
+              </div>
+              <p className="text-emerald-100/30 text-[10px] text-center leading-relaxed font-medium">
+                {mode === 'login'
+                  ? 'Protección de Datos Nivel Bancario'
+                  : 'Seguridad Reforzada - Recuperación de Cuenta'}
+                <br />
+                &copy; 2026 BodegApp Cloud Enterprise Solutions.
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">MiTienda POS</h1>
-          <p className="text-gray-600 mt-2">Sistema de Gestión para Abarrotes</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
-              <span className="text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-7 4a1 1 0 102 0 1 1 0 00-2 0zm1-9a1 1 0 00-.993.883L11 6v5a1 1 0 001.993.117L13 11V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-              </span>
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-blue-800 font-medium mb-2">Credenciales de Demo:</h4>
-            <p className="text-blue-700 text-sm">Email: admin@demo.com</p>
-            <p className="text-blue-700 text-sm">Contraseña: password123</p>
-          </div>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Correo Electrónico
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-              placeholder="admin@demo.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Contraseña
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors pr-12"
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
-        </form>
-
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-800 mb-2">Configuración de Firebase</h4>
-          <p className="text-sm text-gray-600 mb-2">
-            Para usar Firebase en producción, actualiza las credenciales en:
-          </p>
-          <code className="text-xs bg-white px-2 py-1 rounded border">src/lib/firebase.ts</code>
+        {/* Floating badge at the bottom */}
+        <div className="mt-10 flex justify-center opacity-40 hover:opacity-100 transition-all duration-500">
+          <img src="https://supabase.com/dashboard/img/supabase-logo.svg" alt="Powered by Supabase" className="h-6 brightness-0 invert" />
         </div>
       </div>
+
+      <style jsx>{`
+        input::placeholder {
+          color: rgba(209, 250, 229, 0.2);
+        }
+        .mesh-background {
+          background: radial-gradient(circle at top left, #064e3b 0%, #020617 50%),
+                      radial-gradient(circle at bottom right, #065f46 0%, #020617 50%);
+          background-attachment: fixed;
+        }
+      `}</style>
     </div>
   );
 };

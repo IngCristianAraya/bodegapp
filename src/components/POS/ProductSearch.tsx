@@ -12,8 +12,14 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSearch, onBarcodeSearch
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (barcodeMode) {
+    if (!searchQuery.trim()) return;
+
+    // Detectar si parece un código de barras (numérico y longitud mínima razonable)
+    const looksLikeBarcode = /^\d+$/.test(searchQuery) && searchQuery.length >= 8;
+
+    if (barcodeMode || looksLikeBarcode) {
       onBarcodeSearch(searchQuery);
+      setSearchQuery(''); // Limpiar para el siguiente escaneo
     } else {
       onSearch(searchQuery);
     }
@@ -32,15 +38,14 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onSearch, onBarcodeSearch
           />
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         </div>
-        
+
         <button
           type="button"
           onClick={() => setBarcodeMode(!barcodeMode)}
-          className={`p-3 rounded-lg border transition-colors ${
-            barcodeMode 
-              ? 'bg-emerald-100 border-emerald-300 text-emerald-700' 
-              : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
-          }`}
+          className={`p-3 rounded-lg border transition-colors ${barcodeMode
+            ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+            : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+            }`}
           title={barcodeMode ? "Modo búsqueda por nombre" : "Modo escaneo de código"}
         >
           <Barcode size={20} />

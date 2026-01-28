@@ -195,8 +195,8 @@ export async function obtenerMovimientosProducto(productId: string, tenantId: st
     }));
 }
 
-export async function obtenerProductosConStockYAverage(tenantId: string) {
+export async function obtenerProductosConStockYAverage(tenantId: string, includeArchived: boolean = false) {
     const { obtenerProductos } = await import('./supabaseProducts');
-    return obtenerProductos(tenantId);
+    return obtenerProductos(tenantId, includeArchived);
 }
 

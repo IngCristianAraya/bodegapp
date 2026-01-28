@@ -9,41 +9,46 @@ interface PasswordModalProps {
   children?: React.ReactNode;
   title?: string;
   message?: string;
+  correctPassword?: string; // Nuevo: Clave esperada (ej: de store_settings)
 }
 
 const CONFIG_PATH = '/config.json';
 
-const PasswordModal: React.FC<PasswordModalProps> = ({ 
-  isOpen, 
-  actionLabel = 'Confirmar', 
-  onConfirm, 
-  onClose, 
-  loading = false, 
+const PasswordModal: React.FC<PasswordModalProps> = ({
+  isOpen,
+  actionLabel = 'Confirmar',
+  onConfirm,
+  onClose,
+  loading = false,
   children,
   title,
-  message
+  message,
+  correctPassword
 }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
-  
+
   if (!isOpen) return null;
 
   const handlePasswordCheck = async () => {
     setValidating(true);
     setError(null);
     try {
-      // Usa localStorage para evitar pedir la clave repetidamente
-      const sessionOk = localStorage.getItem('adminPasswordOk');
-      if (sessionOk === 'true') {
-        await onConfirm(password);
+      // Si se provee una clave específica (multi-tenant), la comparamos directamente
+      if (typeof correctPassword === 'string' && correctPassword.length > 0) {
+        if (password === correctPassword) {
+          await onConfirm(password);
+        } else {
+          setError('Contraseña incorrecta');
+        }
         return;
       }
-      // Carga la clave maestra desde config.json
+
+      // Fallback a clave maestra de config.json (legacy)
       const res = await fetch(CONFIG_PATH);
       const config = await res.json();
       if (password === config.adminPassword) {
-        localStorage.setItem('adminPasswordOk', 'true');
         await onConfirm(password);
       } else {
         setError('Contraseña incorrecta');
@@ -57,32 +62,32 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-lg text-center">
-        {title && <h3 className="text-lg font-medium mb-2">{title}</h3>}
-        {message && <p className="mb-4 text-gray-600">{message}</p>}
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 dark:border-gray-800 text-center animate-in fade-in zoom-in duration-200">
+        {title && <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">{title}</h3>}
+        {message && <p className="mb-4 text-gray-500 dark:text-gray-400 text-sm font-medium">{message}</p>}
         {children}
         <input
           type="password"
-          className="mt-4 px-4 py-2 border rounded w-full text-center"
-          placeholder="Ingrese contraseña"
+          className="mt-4 px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl w-full text-center text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+          placeholder="Ingrese clave secreta"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={validating || loading}
         />
-        {error && <p className="text-red-500 mt-2">{error}</p>}
-        <div className="mt-6 flex justify-end space-x-3">
+        {error && <p className="text-red-500 mt-2 text-xs font-bold">{error}</p>}
+        <div className="mt-6 flex gap-3">
           <button
             onClick={onClose}
             disabled={validating || loading}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handlePasswordCheck}
             disabled={!password || validating || loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-50"
           >
             {validating ? 'Validando...' : loading ? 'Cargando...' : actionLabel}
           </button>

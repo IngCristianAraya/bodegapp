@@ -8,6 +8,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
     // console.warn('Missing Supabase Environment Variables'); 
 }
 
+console.log('Initializing Supabase client with URL:', supabaseUrl?.substring(0, 20) + '...');
+
 export const supabase = createClient(
     supabaseUrl || '',
     supabaseAnonKey || ''

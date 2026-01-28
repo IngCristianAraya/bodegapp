@@ -45,12 +45,13 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 if (hostname.endsWith(`.${rootDomain}`)) {
                     subdomain = hostname.replace(`.${rootDomain}`, '');
                 } else if (hostname.endsWith(`.${localhost}`) || hostname === localhost) {
-                    // For local development like bodega-juanito.localhost:3000
-                    // but localhost alone should probably default to a landing page or admin
                     if (hostname !== localhost) {
                         subdomain = hostname.split('.')[0];
                     }
                 }
+
+                console.log('TenantProvider: Detected hostname:', hostname);
+                console.log('TenantProvider: Extracted subdomain:', subdomain);
 
                 if (!subdomain || subdomain === 'www') {
                     setTenant(null);

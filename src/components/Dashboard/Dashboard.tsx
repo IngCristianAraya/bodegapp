@@ -12,11 +12,21 @@ import {
   Calendar
 } from 'lucide-react';
 import StatsCard from './StatsCard';
+import RotationAlert from './RotationAlert';
+import ProfitabilityMatrix from './ProfitabilityMatrix';
+import StockPredictionAlert from './StockPredictionAlert';
+import TemporalComparison from './TemporalComparison';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
 import { useTenant } from '../../contexts/TenantContext';
+import { useLowStock } from '../../contexts/LowStockContext';
+import { useToast } from '../../contexts/ToastContext';
 import { calculateDailyEarnings } from '../../utils/calculateDailyEarnings';
+import { analyzeProductRotation, getDeadStock, getSlowMovingStock } from '../../utils/rotationAnalysis';
+import { analyzeProfitability, getAverageStoreMargin } from '../../utils/profitabilityAnalysis';
+import { getCriticalStockAlerts, getWarningStockAlerts } from '../../utils/stockPrediction';
+import { compareWeeks, compareMonths, getBusinessTrend } from '../../utils/temporalAnalysis';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -34,10 +44,13 @@ interface DashboardStats {
 const Dashboard: FC = () => {
   const { user } = useAuth();
   const { tenant } = useTenant();
+  const { criticalStockCount, lowStockCount } = useLowStock();
+  const toast = useToast();
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number }[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
+  const [hasShownAlert, setHasShownAlert] = useState(false);
 
   // Calcular ventas reales de la semana agrupadas por día
   const salesData = useMemo(() => {
@@ -167,6 +180,14 @@ const Dashboard: FC = () => {
     }
   }, [ventas, productos, selectedPeriod, procesarProductosVendidos]);
 
+  // Show low stock alert on mount
+  useEffect(() => {
+    if (!hasShownAlert && criticalStockCount > 0) {
+      toast.warning(`⚠️ ${criticalStockCount} producto${criticalStockCount > 1 ? 's' : ''} en stock crítico`);
+      setHasShownAlert(true);
+    }
+  }, [criticalStockCount, hasShownAlert, toast]);
+
   // Cálculos rápidos
   const ventasHoy = ventas.filter(v => {
     if (!v.createdAt) return false;
@@ -184,6 +205,44 @@ const Dashboard: FC = () => {
 
   const gananciaHoy = calculateDailyEarnings(ventas, productos);
   const stockBajo = productos.filter(p => (p.stock ?? 0) <= (p.minStock ?? 3)).length;
+
+  // Analytics: Rotación y Rentabilidad
+  const rotationData = useMemo(() => {
+    if (productos.length === 0 || ventas.length === 0) return { dead: [], slow: [] };
+    return {
+      dead: getDeadStock(productos, ventas, 60),
+      slow: getSlowMovingStock(productos, ventas, 30)
+    };
+  }, [productos, ventas]);
+
+  const profitabilityData = useMemo(() => {
+    if (productos.length === 0 || ventas.length === 0) return [];
+    return analyzeProfitability(productos, ventas);
+  }, [productos, ventas]);
+
+  const averageMargin = useMemo(() => {
+    if (productos.length === 0 || ventas.length === 0) return 0;
+    return getAverageStoreMargin(productos, ventas);
+  }, [productos, ventas]);
+
+  // Analytics: Predicción de Stock
+  const stockPredictions = useMemo(() => {
+    if (productos.length === 0 || ventas.length === 0) return { critical: [], warning: [] };
+    return {
+      critical: getCriticalStockAlerts(productos, ventas, 3),
+      warning: getWarningStockAlerts(productos, ventas, 3)
+    };
+  }, [productos, ventas]);
+
+  // Analytics: Comparación Temporal
+  const temporalData = useMemo(() => {
+    if (ventas.length === 0) return null;
+    return {
+      weekComparison: compareWeeks(ventas),
+      monthComparison: compareMonths(ventas),
+      trend: getBusinessTrend(ventas)
+    };
+  }, [ventas]);
 
   return (
     <div className="space-y-8 pb-8 animate-in fade-in zoom-in duration-500">
@@ -379,6 +438,35 @@ const Dashboard: FC = () => {
             {topProducts.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400 font-medium py-8 text-sm">No hay datos para este período</p>}
           </div>
         </div>
+
+        {/* Rotation Alert */}
+        <div className="col-span-1 lg:col-span-2">
+          <RotationAlert deadStock={rotationData.dead} slowMoving={rotationData.slow} />
+        </div>
+
+        {/* Stock Prediction */}
+        <div className="col-span-1 lg:col-span-2">
+          <StockPredictionAlert
+            criticalAlerts={stockPredictions.critical}
+            warningAlerts={stockPredictions.warning}
+          />
+        </div>
+
+        {/* Profitability Matrix */}
+        <div className="col-span-1 lg:col-span-2">
+          <ProfitabilityMatrix profitabilityData={profitabilityData} averageMargin={averageMargin} />
+        </div>
+
+        {/* Temporal Comparison */}
+        {temporalData && (
+          <div className="col-span-1 lg:col-span-2">
+            <TemporalComparison
+              weekComparison={temporalData.weekComparison}
+              monthComparison={temporalData.monthComparison}
+              trend={temporalData.trend}
+            />
+          </div>
+        )}
 
         {/* Quick Actions or Other Info */}
         <div className="col-span-1 lg:col-span-2 glass-card rounded-3xl p-6 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 text-white">
