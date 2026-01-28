@@ -88,9 +88,9 @@ const Pricing = () => {
                             </li>
                         </ul>
 
-                        <button className="mt-8 w-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl py-3 px-6 text-center text-white font-bold hover:shadow-lg hover:shadow-emerald-500/40 transition-all">
+                        <Link href="/register" className="mt-8 w-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl py-3 px-6 text-center text-white font-bold hover:shadow-lg hover:shadow-emerald-500/40 transition-all block">
                             Prueba Gratuita de 14 días
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

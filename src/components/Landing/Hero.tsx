@@ -36,9 +36,9 @@ const Hero = () => {
                         Empezar Gratis
                         <ArrowRight size={20} />
                     </Link>
-                    <button className="px-8 py-4 text-lg font-semibold rounded-2xl bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition-all">
+                    <a href="#features" className="px-8 py-4 text-lg font-semibold rounded-2xl bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 transition-all flex items-center justify-center">
                         Ver Demo
-                    </button>
+                    </a>
                 </div>
 
                 {/* Dashboard Preview Mockup */}

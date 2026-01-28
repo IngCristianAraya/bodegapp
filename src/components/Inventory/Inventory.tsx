@@ -19,6 +19,9 @@ import QuickPriceModal from './QuickPriceModal';
 import ProductForm from './ProductForm';
 import InventoryFilters from './InventoryFilters';
 import Pagination from './Pagination';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { Sparkles } from 'lucide-react'; // For the modal icon if needed
+import Link from 'next/link';
 
 // Definir el tipo Supplier localmente ya que no se encuentra en el módulo
 interface Supplier {
@@ -77,6 +80,8 @@ const Inventory: React.FC = () => {
 
   // Estados para validación de PIN
   const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { checkFeatureAccess, getFeatureLimit, isPro } = useSubscription();
   const [pendingAction, setPendingAction] = useState<{ type: 'adjustPrice' | 'delete' | 'adjustStock' | 'editForm', data: any } | null>(null);
 
   // Estado para filtros y paginación
@@ -260,6 +265,17 @@ const Inventory: React.FC = () => {
         </div>
         <button
           onClick={() => {
+            if (!checkFeatureAccess('inventory_limit')) {
+              // Fallback check if simple boolean check passes but numeric doesn't
+              // Actually checkFeatureAccess returns true for numeric limits effectively
+            }
+
+            const limit = getFeatureLimit('inventory_limit');
+            if (productos.length >= limit) {
+              setShowUpgradeModal(true);
+              return;
+            }
+
             setForm({ minStock: 5 });
             setEditProduct(null);
             setShowAddModal(true);
@@ -598,6 +614,41 @@ const Inventory: React.FC = () => {
                   disabled={adjustStock_loading}
                 >
                   {adjustStock_loading ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-md border border-emerald-500/30 shadow-2xl relative overflow-hidden text-center">
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <Sparkles size={32} />
+              </div>
+
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Límite Alcanzado</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+                Has alcanzado el límite de <span className="font-bold text-gray-900 dark:text-white">100 productos</span> del Plan Gratuito. Para agregar más productos ilimitados, actualiza a PRO.
+              </p>
+
+              <div className="flex flex-col gap-3 w-full">
+                <Link
+                  href="/settings?tab=subscription"
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                >
+                  Ver Planes y Precios
+                </Link>
+                <button
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="w-full py-3.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Quizás más tarde
                 </button>
               </div>
             </div>

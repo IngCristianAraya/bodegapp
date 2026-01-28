@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, ShoppingCart, Package, Truck, BarChart3, Settings, LogOut, CircleAlert } from 'lucide-react';
 import { useLowStock } from '../../contexts/LowStockContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -21,6 +22,7 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) => {
   // Use try-catch to handle case where context might not be available
   let criticalStockCount = 0;
+  const { isPro } = useSubscription();
   try {
     const lowStockContext = useLowStock();
     criticalStockCount = lowStockContext.criticalStockCount;
@@ -70,6 +72,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
               );
             })}
           </ul>
+        </div>
+
+        {/* Plan Badge */}
+        <div className="hidden md:flex items-center mr-4">
+          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${isPro
+            ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700'
+            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-gray-700'
+            }`}>
+            {isPro ? 'PLAN PRO' : 'PLAN GRATUITO'}
+          </span>
         </div>
 
         {/* Botón Cerrar Sesión */}

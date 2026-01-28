@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 
 import { TenantProvider } from "../contexts/TenantContext";
 import { LowStockProvider } from "../contexts/LowStockContext";
+import { SubscriptionProvider } from "../contexts/SubscriptionContext";
 
 export default function RootLayout({
   children,
@@ -36,11 +37,13 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <TenantProvider>
-              <LowStockProvider>
-                <CartProvider>
-                  {children}
-                </CartProvider>
-              </LowStockProvider>
+              <SubscriptionProvider>
+                <LowStockProvider>
+                  <CartProvider>
+                    {children}
+                  </CartProvider>
+                </LowStockProvider>
+              </SubscriptionProvider>
             </TenantProvider>
           </AuthProvider>
         </ToastProvider>

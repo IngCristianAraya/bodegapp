@@ -12,8 +12,10 @@ import { exportAllDataToCSV } from '../../lib/exportData';
 import { Sale, Product, SaleItem } from '../../types/index';
 import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 
+
 const Reports: React.FC = () => {
   const { tenant } = useTenant();
+  const { isPro } = useSubscription();
   const [showTicketModal, setShowTicketModal] = React.useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<Sale | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
@@ -296,292 +298,302 @@ const Reports: React.FC = () => {
       {/* Content Area */}
       <div className="glass-card rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-gray-700 bg-white/90 dark:bg-slate-900">
 
-        {reportType === 'ventas' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
-                <tr>
-                  <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">N° Boleta</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Fecha</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Cajero</th>
-                  <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Detalle</th>
-                  <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Total</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Método</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                {ventas
-                  .filter(filterVentas)
-                  .sort((a, b) => {
-                    const nA = Number(a.receiptNumber);
-                    const nB = Number(b.receiptNumber);
-                    if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
-                    return String(b.receiptNumber).localeCompare(String(a.receiptNumber));
-                  })
-                  .slice((ventasPage - 1) * VENTAS_POR_PAGINA, ventasPage * VENTAS_POR_PAGINA)
-                  .map((v, idx) => {
-                    const arr = Array.isArray(v.items) && v.items.length > 0 ? v.items : [];
-                    return (
-                      <tr key={v.id || idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors group">
-                        <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400">{v.receiptNumber || '-'}</td>
-                        <td className="py-3 px-6 text-center">
-                          <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-medium">
-                            {v.createdAt
-                              ? (typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number'
-                                ? new Date((v.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
-                                : new Date(v.createdAt as string | number | Date).toLocaleDateString())
-                              : '-'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-6 text-center text-gray-600 dark:text-gray-300">{v.cashierName || '-'}</td>
-                        <td className="py-3 px-6 text-xs text-gray-500 dark:text-gray-400">
-                          {arr.slice(0, 2).map((i, k) => (
-                            <div key={k} className="text-gray-600 dark:text-gray-300">{i.productName} (x{i.quantity})</div>
-                          ))}
-                          {arr.length > 2 && <div className="text-gray-400 dark:text-gray-500 italic">+{arr.length - 2} más...</div>}
-                        </td>
-                        <td className="py-3 px-6 text-right font-bold text-gray-800 dark:text-white">S/ {v.total?.toFixed(2)}</td>
-                        <td className="py-3 px-6 text-center">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${v.paymentMethod === 'cash' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'}`}>
-                            {v.paymentMethod === 'cash' ? 'Efectivo' : v.paymentMethod}
-                          </span>
-                        </td>
-                        <td className="py-3 px-6 text-center">
-                          <button
-                            className="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 p-2 rounded-full transition-all"
-                            onClick={() => {
-                              setVentaSeleccionada(v);
-                              setShowTicketModal(true);
-                            }}
-                            title="Ver Ticket"
-                          >
-                            <Printer size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-
-            {/* Pagination Controls */}
-            <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
-              <button
-                onClick={() => handlePageChange('ventas', ventasPage - 1)}
-                disabled={ventasPage === 1}
-                className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-              >
-                <ArrowLeft size={16} /> Anterior
-              </button>
-              <span className="text-sm text-gray-400 dark:text-gray-500">Página {ventasPage} de {Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}</span>
-              <button
-                onClick={() => handlePageChange('ventas', ventasPage + 1)}
-                disabled={ventasPage === Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}
-                className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-              >
-                Siguiente <ArrowRight size={16} />
-              </button>
-            </div>
+        {!isPro && (reportType === 'ganancias' || reportType === 'movimientos') ? (
+          <div className="p-8 flex justify-center items-center min-h-[400px]">
+            <UpgradeAlert
+              title="Reportes Avanzados"
+              message="El análisis de ganancias y movimientos de inventario detallados solo está disponible en el Plan PRO."
+              className="max-w-2xl w-full"
+            />
           </div>
-        )}
+        ) : (
+          <>
+            {reportType === 'ventas' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
+                    <tr>
+                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">N° Boleta</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Fecha</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Cajero</th>
+                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Detalle</th>
+                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Total</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Método</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                    {ventas
+                      .filter(filterVentas)
+                      .sort((a, b) => {
+                        const nA = Number(a.receiptNumber);
+                        const nB = Number(b.receiptNumber);
+                        if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
+                        return String(b.receiptNumber).localeCompare(String(a.receiptNumber));
+                      })
+                      .slice((ventasPage - 1) * VENTAS_POR_PAGINA, ventasPage * VENTAS_POR_PAGINA)
+                      .map((v, idx) => {
+                        const arr = Array.isArray(v.items) && v.items.length > 0 ? v.items : [];
+                        return (
+                          <tr key={v.id || idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors group">
+                            <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400">{v.receiptNumber || '-'}</td>
+                            <td className="py-3 px-6 text-center">
+                              <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-medium">
+                                {v.createdAt
+                                  ? (typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number'
+                                    ? new Date((v.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
+                                    : new Date(v.createdAt as string | number | Date).toLocaleDateString())
+                                  : '-'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-6 text-center text-gray-600 dark:text-gray-300">{v.cashierName || '-'}</td>
+                            <td className="py-3 px-6 text-xs text-gray-500 dark:text-gray-400">
+                              {arr.slice(0, 2).map((i, k) => (
+                                <div key={k} className="text-gray-600 dark:text-gray-300">{i.productName} (x{i.quantity})</div>
+                              ))}
+                              {arr.length > 2 && <div className="text-gray-400 dark:text-gray-500 italic">+{arr.length - 2} más...</div>}
+                            </td>
+                            <td className="py-3 px-6 text-right font-bold text-gray-800 dark:text-white">S/ {v.total?.toFixed(2)}</td>
+                            <td className="py-3 px-6 text-center">
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${v.paymentMethod === 'cash' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'}`}>
+                                {v.paymentMethod === 'cash' ? 'Efectivo' : v.paymentMethod}
+                              </span>
+                            </td>
+                            <td className="py-3 px-6 text-center">
+                              <button
+                                className="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 p-2 rounded-full transition-all"
+                                onClick={() => {
+                                  setVentaSeleccionada(v);
+                                  setShowTicketModal(true);
+                                }}
+                                title="Ver Ticket"
+                              >
+                                <Printer size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
 
-        {reportType === 'inventario' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
-                <tr>
-                  <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Código</th>
-                  <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Producto</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Stock</th>
-                  <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Precio Venta</th>
-                  <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Costo Promedio</th>
-                  <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Proveedor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                {productos.slice((inventarioPage - 1) * INVENTARIO_POR_PAGINA, inventarioPage * INVENTARIO_POR_PAGINA).map((p, i) => (
-                  <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400 text-xs">{p.code}</td>
-                    <td className="py-3 px-6 font-bold text-gray-800 dark:text-white">{p.name}</td>
-                    <td className="py-3 px-6 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${p.stock <= (p.minStock ?? 0) ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'}`}>
-                        {p.stock}
-                      </span>
-                    </td>
-                    <td className="py-3 px-6 text-right font-semibold text-gray-900 dark:text-white">S/ {p.salePrice?.toFixed(2)}</td>
-                    <td className="py-3 px-6 text-right text-gray-500 dark:text-gray-400">S/ {p.averageCost?.toFixed(2)}</td>
-                    <td className="py-3 px-6 text-center text-xs text-gray-500 dark:text-gray-400">{p.supplier || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
-              <button
-                onClick={() => handlePageChange('inventario', inventarioPage - 1)}
-                disabled={inventarioPage === 1}
-                className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-              >
-                <ArrowLeft size={16} /> Anterior
-              </button>
-              <span className="text-sm text-gray-400 dark:text-gray-500">Página {inventarioPage} de {Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}</span>
-              <button
-                onClick={() => handlePageChange('inventario', inventarioPage + 1)}
-                disabled={inventarioPage === Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}
-                className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-              >
-                Siguiente <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {reportType === 'ganancias' && !loading && ventas.length > 0 && (
-          <div className="p-6">
-            <table className="w-full border-separate border-spacing-0 rounded-xl overflow-hidden shadow-sm mb-4 bg-white dark:bg-slate-900">
-              <thead>
-                <tr className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-400 text-sm">
-                  <th className="py-3 px-4 text-center font-semibold">Fecha</th>
-                  <th className="py-3 px-4 text-right font-semibold">Ventas Totales</th>
-                  <th className="py-3 px-4 text-right font-semibold">Costo Total</th>
-                  <th className="py-3 px-4 text-right font-semibold">Ganancia Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                  const resumen: { [fecha: string]: { label: string, ventas: number, costo: number, ganancia: number } } = {};
-                  ventas.filter(filterVentas).forEach(v => {
-                    let fecha = null;
-                    if (v.createdAt instanceof Date) fecha = v.createdAt;
-                    else if (v.createdAt && typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number') fecha = new Date((v.createdAt as { seconds: number }).seconds * 1000);
-                    else if (typeof v.createdAt === 'string') fecha = new Date(v.createdAt);
-                    if (!fecha || isNaN(fecha.getTime())) return;
-
-                    const year = fecha.getFullYear();
-                    const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                    const day = fecha.getDate().toString().padStart(2, '0');
-                    const key = `${year}-${month}-${day}`;
-                    const label = `${dias[fecha.getDay()]} ${day}/${month}`;
-                    if (!resumen[key]) resumen[key] = { label, ventas: 0, costo: 0, ganancia: 0 };
-                    resumen[key].ventas += v.total || 0;
-
-                    let costoVenta = 0;
-                    let gananciaVenta = 0;
-                    (Array.isArray(v.items) && v.items.length > 0 ? v.items : []).forEach((item: SaleItem) => {
-                      const cantidad = item.quantity || 1;
-                      const precio = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
-                      const producto = productos.find((p: Product) => p.id === item.productId);
-                      const costoUnit = producto?.costPrice ?? producto?.averageCost ?? 0;
-                      const costo = cantidad * costoUnit;
-                      const subtotal = cantidad * precio;
-                      costoVenta += costo;
-                      gananciaVenta += subtotal - costo;
-                    });
-                    resumen[key].costo += costoVenta;
-                    resumen[key].ganancia += gananciaVenta;
-                  });
-                  return Object.entries(resumen)
-                    .sort((a, b) => b[0].localeCompare(a[0]))
-                    .map(([key, data]) => (
-                      <tr key={key} className="border-b last:border-0 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                        <td className="py-3 px-4 text-center font-medium text-gray-700 dark:text-gray-300">{data.label}</td>
-                        <td className="py-3 px-4 text-right text-gray-900 dark:text-white font-semibold">S/ {data.ventas.toFixed(2)}</td>
-                        <td className="py-3 px-4 text-right text-red-500 dark:text-red-400">S/ {data.costo.toFixed(2)}</td>
-                        <td className="py-3 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400">S/ {data.ganancia.toFixed(2)}</td>
-                      </tr>
-                    ));
-                })()}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {reportType === 'movimientos' && (
-          <div className="p-6">
-            <InventoryMovementsReport />
-          </div>
-        )}
-      </div>
-
-      {/* Ticket Modal */}
-      {showTicketModal && ventaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b flex items-center justify-between">
-              <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
-              <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <Search className="rotate-45" size={20} />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
-              <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
-                <div ref={ticketRef} className="p-2">
-                  <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
+                {/* Pagination Controls */}
+                <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
+                  <button
+                    onClick={() => handlePageChange('ventas', ventasPage - 1)}
+                    disabled={ventasPage === 1}
+                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
+                  >
+                    <ArrowLeft size={16} /> Anterior
+                  </button>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">Página {ventasPage} de {Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}</span>
+                  <button
+                    onClick={() => handlePageChange('ventas', ventasPage + 1)}
+                    disabled={ventasPage === Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}
+                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
+                  >
+                    Siguiente <ArrowRight size={16} />
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
-              <button
-                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
-                onClick={() => setShowTicketModal(false)}
-              >
-                Cerrar
-              </button>
-              <button
-                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
-                onClick={() => {
-                  if (!ticketRef.current) return;
-                  const printContents = ticketRef.current.innerHTML;
-                  const win = window.open('', '', 'width=400,height=600');
-                  if (win) {
-                    win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
-                    win.document.close();
-                    win.focus();
-                    setTimeout(() => {
-                      win.print();
-                      win.close();
-                    }, 500);
-                  }
-                }}
-              >
-                <Printer size={18} />
-                Imprimir
-              </button>
+            {reportType === 'inventario' && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
+                    <tr>
+                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Código</th>
+                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Producto</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Stock</th>
+                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Precio Venta</th>
+                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Costo Promedio</th>
+                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Proveedor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                    {productos.slice((inventarioPage - 1) * INVENTARIO_POR_PAGINA, inventarioPage * INVENTARIO_POR_PAGINA).map((p, i) => (
+                      <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400 text-xs">{p.code}</td>
+                        <td className="py-3 px-6 font-bold text-gray-800 dark:text-white">{p.name}</td>
+                        <td className="py-3 px-6 text-center">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${p.stock <= (p.minStock ?? 0) ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'}`}>
+                            {p.stock}
+                          </span>
+                        </td>
+                        <td className="py-3 px-6 text-right font-semibold text-gray-900 dark:text-white">S/ {p.salePrice?.toFixed(2)}</td>
+                        <td className="py-3 px-6 text-right text-gray-500 dark:text-gray-400">S/ {p.averageCost?.toFixed(2)}</td>
+                        <td className="py-3 px-6 text-center text-xs text-gray-500 dark:text-gray-400">{p.supplier || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
+                  <button
+                    onClick={() => handlePageChange('inventario', inventarioPage - 1)}
+                    disabled={inventarioPage === 1}
+                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
+                  >
+                    <ArrowLeft size={16} /> Anterior
+                  </button>
+                  <span className="text-sm text-gray-400 dark:text-gray-500">Página {inventarioPage} de {Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}</span>
+                  <button
+                    onClick={() => handlePageChange('inventario', inventarioPage + 1)}
+                    disabled={inventarioPage === Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}
+                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
+                  >
+                    Siguiente <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {reportType === 'ganancias' && !loading && ventas.length > 0 && (
+              <div className="p-6">
+                <table className="w-full border-separate border-spacing-0 rounded-xl overflow-hidden shadow-sm mb-4 bg-white dark:bg-slate-900">
+                  <thead>
+                    <tr className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-400 text-sm">
+                      <th className="py-3 px-4 text-center font-semibold">Fecha</th>
+                      <th className="py-3 px-4 text-right font-semibold">Ventas Totales</th>
+                      <th className="py-3 px-4 text-right font-semibold">Costo Total</th>
+                      <th className="py-3 px-4 text-right font-semibold">Ganancia Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                      const resumen: { [fecha: string]: { label: string, ventas: number, costo: number, ganancia: number } } = {};
+                      ventas.filter(filterVentas).forEach(v => {
+                        let fecha = null;
+                        if (v.createdAt instanceof Date) fecha = v.createdAt;
+                        else if (v.createdAt && typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number') fecha = new Date((v.createdAt as { seconds: number }).seconds * 1000);
+                        else if (typeof v.createdAt === 'string') fecha = new Date(v.createdAt);
+                        if (!fecha || isNaN(fecha.getTime())) return;
+
+                        const year = fecha.getFullYear();
+                        const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
+                        const day = fecha.getDate().toString().padStart(2, '0');
+                        const key = `${year}-${month}-${day}`;
+                        const label = `${dias[fecha.getDay()]} ${day}/${month}`;
+                        if (!resumen[key]) resumen[key] = { label, ventas: 0, costo: 0, ganancia: 0 };
+                        resumen[key].ventas += v.total || 0;
+
+                        let costoVenta = 0;
+                        let gananciaVenta = 0;
+                        (Array.isArray(v.items) && v.items.length > 0 ? v.items : []).forEach((item: SaleItem) => {
+                          const cantidad = item.quantity || 1;
+                          const precio = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+                          const producto = productos.find((p: Product) => p.id === item.productId);
+                          const costoUnit = producto?.costPrice ?? producto?.averageCost ?? 0;
+                          const costo = cantidad * costoUnit;
+                          const subtotal = cantidad * precio;
+                          costoVenta += costo;
+                          gananciaVenta += subtotal - costo;
+                        });
+                        resumen[key].costo += costoVenta;
+                        resumen[key].ganancia += gananciaVenta;
+                      });
+                      return Object.entries(resumen)
+                        .sort((a, b) => b[0].localeCompare(a[0]))
+                        .map(([key, data]) => (
+                          <tr key={key} className="border-b last:border-0 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                            <td className="py-3 px-4 text-center font-medium text-gray-700 dark:text-gray-300">{data.label}</td>
+                            <td className="py-3 px-4 text-right text-gray-900 dark:text-white font-semibold">S/ {data.ventas.toFixed(2)}</td>
+                            <td className="py-3 px-4 text-right text-red-500 dark:text-red-400">S/ {data.costo.toFixed(2)}</td>
+                            <td className="py-3 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400">S/ {data.ganancia.toFixed(2)}</td>
+                          </tr>
+                        ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {reportType === 'movimientos' && (
+              <div className="p-6">
+                <InventoryMovementsReport />
+              </div>
+            )}
+          </div>
+
+        {/* Ticket Modal */}
+        {showTicketModal && ventaSeleccionada && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
+              <div className="p-4 border-b flex items-center justify-between">
+                <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
+                <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <Search className="rotate-45" size={20} />
+                </button>
+              </div>
+
+              <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
+                <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
+                  <div ref={ticketRef} className="p-2">
+                    <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
+                <button
+                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
+                  onClick={() => setShowTicketModal(false)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                  onClick={() => {
+                    if (!ticketRef.current) return;
+                    const printContents = ticketRef.current.innerHTML;
+                    const win = window.open('', '', 'width=400,height=600');
+                    if (win) {
+                      win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
+                      win.document.close();
+                      win.focus();
+                      setTimeout(() => {
+                        win.print();
+                        win.close();
+                      }, 500);
+                    }
+                  }}
+                >
+                  <Printer size={18} />
+                  Imprimir
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-    </div>
-  );
+      </div>
+      );
 };
 
-// Adapta la venta seleccionada a la estructura esperada por TicketVenta
-function mapVentaToTicket(venta: Sale) {
+      // Adapta la venta seleccionada a la estructura esperada por TicketVenta
+      function mapVentaToTicket(venta: Sale) {
   const items = (Array.isArray(venta.items) ? venta.items : []).map((i: SaleItem) => ({
-    productName: i.productName || '',
-    quantity: i.quantity || 1,
-    unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
+        productName: i.productName || '',
+      quantity: i.quantity || 1,
+      unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
   }));
-  return {
-    receiptNumber: String(venta.receiptNumber ?? '-'),
-    cashierName: String(venta.cashierName ?? '-'),
-    customerName: String(venta.customerName ?? ''),
-    paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
-    date: venta.createdAt
-      ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as { seconds?: unknown }).seconds === 'number'
-        ? new Date((venta.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
-        : new Date(venta.createdAt as string | Date).toLocaleDateString())
+      return {
+        receiptNumber: String(venta.receiptNumber ?? '-'),
+      cashierName: String(venta.cashierName ?? '-'),
+      customerName: String(venta.customerName ?? ''),
+      paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
+      date: venta.createdAt
+      ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as {seconds ?: unknown}).seconds === 'number'
+      ? new Date((venta.createdAt as {seconds: number }).seconds * 1000).toLocaleDateString()
+      : new Date(venta.createdAt as string | Date).toLocaleDateString())
       : '-',
-    items,
-    subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
-    discount: typeof venta.discount === 'number' ? venta.discount : 0,
-    igv: typeof venta.igv === 'number' ? venta.igv : 0,
-    total: typeof venta.total === 'number' ? venta.total : 0,
+      items,
+      subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
+      discount: typeof venta.discount === 'number' ? venta.discount : 0,
+      igv: typeof venta.igv === 'number' ? venta.igv : 0,
+      total: typeof venta.total === 'number' ? venta.total : 0,
   };
 }
 
-export default Reports;
+      export default Reports;

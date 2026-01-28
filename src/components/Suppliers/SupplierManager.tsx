@@ -1,14 +1,13 @@
-// 1. Fixed Imports
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
 import { Truck, Plus, Edit2, Trash2, Phone, Package, Download, X } from 'lucide-react';
-import { createPortal } from 'react-dom'; // Import createPortal instead of require
+import { createPortal } from 'react-dom';
 import { crearProveedor, obtenerProveedores, actualizarProveedor, eliminarProveedor } from '../../lib/supabaseSuppliers';
 import { obtenerProductosPorProveedor } from '../../lib/supabaseProducts';
 import type { Supplier } from '../../types/index';
-// ... items ...
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-// 2. Fixed Duplicate Key in initialForm
 const initialForm: any = {
   name: '',
   contact: '',
@@ -21,7 +20,6 @@ const initialForm: any = {
   notes: '',
   category: '',
   products: [],
-  // Removed duplicate products: []
 };
 
 const Portal = ({ children }: { children: React.ReactNode }) => {
@@ -38,9 +36,20 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
     : null;
 };
 
-// ...
+const SupplierManager: React.FC = () => {
+  const { tenant } = useTenant();
+  const [proveedores, setProveedores] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState<any>(initialForm);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'logistics' | 'notes'>('info');
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [supplierProducts, setSupplierProducts] = useState<any[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
-// 3. Fixed useEffect and fetchProveedores
   const fetchProveedores = useCallback(async () => {
     if (!tenant?.id) return;
     setLoading(true);
@@ -57,22 +66,6 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     fetchProveedores();
   }, [fetchProveedores]);
-
-// ...
-
-// 4. Fixed Unescaped Quotes
-                    <p className="text-sm">Asegúrate de que el campo &quot;Proveedor&quot; en tus productos coincida con &quot;{selectedSupplier.name}&quot;.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800/50 flex items-start gap-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-800/40 rounded-full text-amber-600 dark:text-amber-400">
-                        <Download size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-amber-900 dark:text-amber-200">Generar Orden de Compra Inteligente</h4>
-                        <p className="text-sm text-amber-800 dark:text-amber-300/80 mb-2">Crear automáticamente un PDF con los productos que necesitan reabastecimiento (Stock actual &lt; Stock mínimo).</p>
-                        <button
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,12 +210,10 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
 
   const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-
-
   return (
     <div className="glass-card rounded-2xl shadow-xl w-full max-w-full overflow-hidden animate-in fade-in zoom-in duration-300 bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700">
 
-      {/* ... Card Content (Header and List) - Unchanged ... */}
+      {/* Header Area */}
       <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
         <div>
           <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
@@ -297,7 +288,7 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
                   </div>
                 </div>
 
-                {/* New: Quick Actions */}
+                {/* Quick Actions */}
                 <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-700">
                   <button
                     onClick={() => handleViewProducts(p)}
@@ -635,6 +626,5 @@ const Portal = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
-
 
 export default SupplierManager;
