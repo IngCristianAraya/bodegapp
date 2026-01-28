@@ -63,7 +63,7 @@ const RotationAlert: React.FC<RotationAlertProps> = ({ deadStock, slowMoving }) 
                 ))}
 
                 {/* Slow Moving (30-60 días) */}
-                {slowMoving.slice(0, 2).map((item, index) => (
+                {slowMoving.slice(0, 2).map((item) => (
                     <div
                         key={item.productId}
                         className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800"

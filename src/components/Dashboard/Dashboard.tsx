@@ -23,7 +23,7 @@ import { useTenant } from '../../contexts/TenantContext';
 import { useLowStock } from '../../contexts/LowStockContext';
 import { useToast } from '../../contexts/ToastContext';
 import { calculateDailyEarnings } from '../../utils/calculateDailyEarnings';
-import { analyzeProductRotation, getDeadStock, getSlowMovingStock } from '../../utils/rotationAnalysis';
+import { getDeadStock, getSlowMovingStock } from '../../utils/rotationAnalysis';
 import { analyzeProfitability, getAverageStoreMargin } from '../../utils/profitabilityAnalysis';
 import { getCriticalStockAlerts, getWarningStockAlerts } from '../../utils/stockPrediction';
 import { compareWeeks, compareMonths, getBusinessTrend } from '../../utils/temporalAnalysis';
@@ -32,19 +32,9 @@ const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 type Period = 'day' | 'week' | 'month';
 
-interface DashboardStats {
-  todaySales: number;
-  todayOrders: number;
-  weekSales: number;
-  monthSales: number;
-  lowStockCount: number;
-  topProducts: { name: string; sales: number; revenue: number }[];
-}
-
 const Dashboard: FC = () => {
-  const { user } = useAuth();
   const { tenant } = useTenant();
-  const { criticalStockCount, lowStockCount } = useLowStock();
+  const { criticalStockCount } = useLowStock();
   const toast = useToast();
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);

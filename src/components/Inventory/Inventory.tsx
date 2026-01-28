@@ -42,7 +42,6 @@ type FilterValues = {
 const Inventory: React.FC = () => {
   // Contexto y usuario
   const { showToast } = useToast();
-  const { user } = useAuth();
   const { tenant } = useTenant();
   const companyId = tenant?.id || '';
 
@@ -81,7 +80,7 @@ const Inventory: React.FC = () => {
   // Estados para validación de PIN
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const { checkFeatureAccess, getFeatureLimit, isPro } = useSubscription();
+  const { checkFeatureAccess, getFeatureLimit } = useSubscription();
   const [pendingAction, setPendingAction] = useState<{ type: 'adjustPrice' | 'delete' | 'adjustStock' | 'editForm', data: any } | null>(null);
 
   // Estado para filtros y paginación
