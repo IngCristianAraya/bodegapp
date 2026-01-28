@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, X, ChevronRight } from 'lucide-react';
 import type { CartItem } from '../../types/index';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -126,7 +126,7 @@ export default function Cart({ cart, removeFromCart, updateQuantity, total, subt
                 </div>
 
                 <button
-                  onClick={() => removeItem(item.product.id)}
+                  onClick={() => removeFromCart(item.product.id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
                 >
                   <Trash2 size={16} />
@@ -204,10 +204,10 @@ export default function Cart({ cart, removeFromCart, updateQuantity, total, subt
           </button>
           <button
             onClick={() => setShowPaymentMethods(true)}
-            disabled={state.items.length === 0}
+            disabled={cart.length === 0}
             className="flex-1 bg-gray-900 dark:bg-white dark:text-slate-900 text-white py-3 rounded-xl font-bold text-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg shadow-gray-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
           >
-            <span>Pagar S/. {state.total.toFixed(2)}</span>
+            <span>Pagar S/. {total.toFixed(2)}</span>
             <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>

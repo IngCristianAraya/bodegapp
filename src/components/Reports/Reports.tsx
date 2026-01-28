@@ -3,14 +3,14 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketVenta from '../POS/TicketVenta';
 import ReportsMenu from './ReportsMenu';
-import InventoryMovementsReport from './InventoryMovementsReport';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
 import { getStoreSettings, StoreSettings } from '../../lib/supabaseSettings';
 import { useTenant } from '../../contexts/TenantContext';
-import { exportAllDataToCSV } from '../../lib/exportData';
 import { Sale, Product, SaleItem } from '../../types/index';
-import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight } from 'lucide-react';
+import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight, Lock } from 'lucide-react';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import UpgradeAlert from '../common/UpgradeAlert';
 
 
 const Reports: React.FC = () => {
