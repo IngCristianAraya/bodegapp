@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
 import { Truck, Plus, Edit2, Trash2, Phone, Package, Download, X } from 'lucide-react';
