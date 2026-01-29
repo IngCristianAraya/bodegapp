@@ -328,7 +328,7 @@ const Dashboard: FC = () => {
                     fontWeight: 600
                   }}
                   itemStyle={{ color: '#10b981', fontWeight: 700 }}
-                  formatter={(value: number) => [`S /.${value.toFixed(2)} `, 'Ventas']}
+                  formatter={(value: number | undefined) => [`S /.${(value ?? 0).toFixed(2)} `, 'Ventas']}
                 />
                 <Area
                   type="monotone"
