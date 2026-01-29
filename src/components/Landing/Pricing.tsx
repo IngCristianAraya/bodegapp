@@ -1,12 +1,23 @@
+"use client";
+
 import React from 'react';
 import { Check, X } from 'lucide-react';
 import Link from 'next/link';
+import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 
 const Pricing = () => {
+    const { ref: headerRef, isVisible: headerVisible } = useScrollAnimation({ threshold: 0.3 });
+    const { ref: card1Ref, isVisible: card1Visible } = useScrollAnimation({ threshold: 0.2 });
+    const { ref: card2Ref, isVisible: card2Visible } = useScrollAnimation({ threshold: 0.2 });
+
     return (
         <div id="planes" className="bg-slate-900 py-24 relative">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-16">
+                <div
+                    ref={headerRef}
+                    className={`text-center mb-16 transition-all duration-700 ${headerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                        }`}
+                >
                     <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
                         Planes simples y transparentes
                     </h2>
@@ -17,7 +28,11 @@ const Pricing = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                     {/* Plan Gratuito */}
-                    <div className="bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8 flex flex-col hover:border-emerald-500/30 transition-all">
+                    <div
+                        ref={card1Ref}
+                        className={`bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8 flex flex-col hover:border-emerald-500/30 transition-all duration-700 ${card1Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                            }`}
+                    >
                         <h3 className="text-xl font-semibold text-white">Plan Bodeguero</h3>
                         <p className="mt-4 text-slate-400">Perfecto para empezar a digitalizarte.</p>
                         <div className="mt-6 flex items-baseline">
@@ -54,7 +69,12 @@ const Pricing = () => {
                     </div>
 
                     {/* Plan Pro */}
-                    <div className="bg-gradient-to-b from-emerald-900/40 to-slate-800 rounded-2xl shadow-2xl border border-emerald-500/50 p-8 flex flex-col relative transform scale-105 z-10">
+                    <div
+                        ref={card2Ref}
+                        className={`bg-gradient-to-b from-emerald-900/40 to-slate-800 rounded-2xl shadow-2xl border border-emerald-500/50 p-8 flex flex-col relative transform scale-105 z-10 transition-all duration-700 ${card2Visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+                            }`}
+                        style={{ transitionDelay: card2Visible ? '100ms' : '0ms' }}
+                    >
                         <div className="absolute top-0 right-0 -mt-3 mr-4 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-lg">
                             Más Popular
                         </div>
