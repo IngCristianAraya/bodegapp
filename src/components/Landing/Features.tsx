@@ -36,7 +36,7 @@ const features = [
 
 const Features = () => {
     return (
-        <div id="features" className="bg-slate-900 py-24 relative overflow-hidden">
+        <div id="caracteristicas" className="bg-slate-900 py-24 relative overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
                     <h2 className="text-base font-semibold text-emerald-400 uppercase tracking-wide">Características</h2>

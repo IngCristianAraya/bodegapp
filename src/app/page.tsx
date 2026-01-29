@@ -10,6 +10,7 @@ import Reports from "../components/Reports/Reports";
 import LowStockManager from "../components/LowStock/LowStockManager";
 import Settings from "../components/Settings/Settings";
 import SupplierManager from '../components/Suppliers/SupplierManager';
+import LandingNavbar from "../components/Landing/LandingNavbar";
 import Hero from "../components/Landing/Hero";
 import Features from "../components/Landing/Features";
 import Pricing from "../components/Landing/Pricing";
@@ -44,7 +45,7 @@ export default function Home() {
     if (isLandingPage) {
       return (
         <main className="min-h-screen bg-slate-900">
-          <Navbar currentPage="landing" onPageChange={() => { }} onLogout={() => { }} />
+          <LandingNavbar />
           <Hero />
           <Features />
           <Pricing />
