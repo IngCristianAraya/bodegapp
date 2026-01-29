@@ -11,7 +11,9 @@ export function middleware(request: NextRequest) {
     let subdomain = '';
 
     if (hostname.includes(rootDomain)) {
-        subdomain = hostname.replace(`.${rootDomain}`, '');
+        // Extract subdomain from pepito.bodegapp.tubarrio.pe -> pepito
+        const parts = hostname.replace(`.${rootDomain}`, '').split('.');
+        subdomain = parts[0]; // Get the first part (pepito)
     } else if (hostname.includes(localhost)) {
         subdomain = hostname.replace(`.${localhost}`, '');
     }

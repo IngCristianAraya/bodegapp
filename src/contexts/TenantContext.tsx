@@ -43,7 +43,9 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 let subdomain = '';
 
                 if (hostname.endsWith(`.${rootDomain}`)) {
-                    subdomain = hostname.replace(`.${rootDomain}`, '');
+                    // Extract subdomain from pepito.bodegapp.tubarrio.pe -> pepito
+                    const parts = hostname.replace(`.${rootDomain}`, '').split('.');
+                    subdomain = parts[0]; // Get the first part (pepito)
                 } else if (hostname.endsWith(`.${localhost}`) || hostname === localhost) {
                     if (hostname !== localhost) {
                         subdomain = hostname.split('.')[0];
