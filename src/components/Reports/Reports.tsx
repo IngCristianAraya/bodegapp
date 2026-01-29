@@ -560,37 +560,38 @@ const Reports: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
             )}
 
-          </div>
-        );
+      </div>
+      );
 
-        return content;
+      return content;
 };
 
-        // Adapta la venta seleccionada a la estructura esperada por TicketVenta
-        function mapVentaToTicket(venta: Sale) {
+      // Adapta la venta seleccionada a la estructura esperada por TicketVenta
+      function mapVentaToTicket(venta: Sale) {
   const items = (Array.isArray(venta.items) ? venta.items : []).map((i: SaleItem) => ({
-          productName: i.productName || '',
-        quantity: i.quantity || 1,
-        unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
+        productName: i.productName || '',
+      quantity: i.quantity || 1,
+      unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
   }));
-        return {
-          receiptNumber: String(venta.receiptNumber ?? '-'),
-        cashierName: String(venta.cashierName ?? '-'),
-        customerName: String(venta.customerName ?? ''),
-        paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
-        date: venta.createdAt
-        ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as {seconds ?: unknown}).seconds === 'number'
-        ? new Date((venta.createdAt as {seconds: number }).seconds * 1000).toLocaleDateString()
-        : new Date(venta.createdAt as string | Date).toLocaleDateString())
-        : '-',
-        items,
-        subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
-        discount: typeof venta.discount === 'number' ? venta.discount : 0,
-        igv: typeof venta.igv === 'number' ? venta.igv : 0,
-        total: typeof venta.total === 'number' ? venta.total : 0,
+      return {
+        receiptNumber: String(venta.receiptNumber ?? '-'),
+      cashierName: String(venta.cashierName ?? '-'),
+      customerName: String(venta.customerName ?? ''),
+      paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
+      date: venta.createdAt
+      ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as {seconds ?: unknown}).seconds === 'number'
+      ? new Date((venta.createdAt as {seconds: number }).seconds * 1000).toLocaleDateString()
+      : new Date(venta.createdAt as string | Date).toLocaleDateString())
+      : '-',
+      items,
+      subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
+      discount: typeof venta.discount === 'number' ? venta.discount : 0,
+      igv: typeof venta.igv === 'number' ? venta.igv : 0,
+      total: typeof venta.total === 'number' ? venta.total : 0,
   };
 }
 
-        export default Reports;
+      export default Reports;
