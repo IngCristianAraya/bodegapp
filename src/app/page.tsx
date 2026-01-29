@@ -15,6 +15,7 @@ import Hero from "../components/Landing/Hero";
 import Features from "../components/Landing/Features";
 import Pricing from "../components/Landing/Pricing";
 import Footer from "../components/Landing/Footer";
+import WhatsAppButton from "../components/Landing/WhatsAppButton";
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
@@ -50,6 +51,7 @@ export default function Home() {
           <Features />
           <Pricing />
           <Footer />
+          <WhatsAppButton />
         </main>
       );
     }

@@ -21,6 +21,8 @@ import { useReactToPrint } from 'react-to-print';
 import { Product } from '../../types/inventory';
 import { CartItem } from '../../types/index';
 import { categoryData, CategoryKey } from '@/lib/constants/categoryData';
+import { getSubcategoryIcon } from '@/lib/constants/subcategoryIcons';
+import { ArrowLeft, Package } from 'lucide-react';
 
 const POS: React.FC = () => {
   const [showTicket, setShowTicket] = useState(false);
@@ -129,6 +131,19 @@ const POS: React.FC = () => {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+  };
+
+  // Calcular stock disponible basado en el carrito
+  const getAvailableStock = (productId: string): number => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return 0;
+
+    // Buscar si el producto ya está en el carrito
+    const cartItem = state.items.find(item => item.product.id === productId);
+    const quantityInCart = cartItem?.quantity || 0;
+
+    // Restar lo que está en carrito del stock real
+    return Math.max(0, product.stock - quantityInCart);
   };
 
   const handleBarcodeSearch = (barcode: string) => {
@@ -316,77 +331,74 @@ const POS: React.FC = () => {
           <div className="flex flex-col gap-4 py-2">
 
             {/* Categories Level - Flexible Wrapping Grid */}
-            <div className="flex flex-wrap items-center gap-3 pb-4 px-1">
-              {/* All / Back Button */}
-              {selectedCategory !== null ? (
+            <div className="flex flex-wrap gap-3 pb-4">
+              {/* Back Button (Only visible when category selected) */}
+              {selectedCategory && (
                 <button
                   onClick={() => {
                     setSelectedCategory(null);
                     setSelectedSubcategory(null);
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold transition-all border-2 border-red-100 bg-red-50 text-red-600 hover:bg-red-100 active:scale-95 shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shrink-0"
                 >
-                  <span className="text-lg">←</span>
+                  <ArrowLeft size={18} />
                   <span className="text-sm">Categorías</span>
                 </button>
-              ) : (
+              )}
+              {selectedCategory === null && (
                 <button
                   onClick={() => {
                     setSelectedCategory(null);
                     setSelectedSubcategory(null);
                   }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedCategory === null
-                    ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                    : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 hover:border-emerald-200'
+                  className={`group flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${selectedCategory === null
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
                 >
-                  <CategoryBadge category="all" />
+                  <Package size={16} className={`transition-transform duration-200 ${selectedCategory === null ? 'scale-110' : 'group-hover:scale-110'}`} />
+                  <span className="capitalize">Todos</span>
                 </button>
               )}
 
-              {selectedCategory === null && categoryList.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    setSelectedSubcategory(null);
-                  }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedCategory === cat
-                    ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                    : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:border-emerald-200'
-                    }`}
-                >
-                  <CategoryBadge category={cat} />
-                </button>
-              ))}
+              {selectedCategory === null && categoryList.map((cat) => {
+                const data = categoryData[cat];
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      setSelectedSubcategory(null);
+                    }}
+                    className={`group flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${selectedCategory === cat
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
+                      }`}
+                  >
+                    <span className={`text-base leading-none transition-transform duration-200 ${selectedCategory === cat ? 'scale-110' : 'group-hover:scale-110'}`}>
+                      {data.icon}
+                    </span>
+                    <span className="capitalize">{cat}</span>
+                  </button>
+                )
+              })}
 
               {/* Subcategories (Visible only when a category is selected) */}
               {selectedCategory !== null && (categoryData[selectedCategory as CategoryKey]?.subcategories || []).map((subcat) => {
-                const iconMap: Record<string, string> = {
-                  'menestras': '🫘', 'pastas': '🍝', 'arroz': '🍚', 'salsas': '🥫', 'aceites': '🛢️',
-                  'condimentos': '🧂', 'conservas': '🥫', 'otro': '📦', 'huevos': '🥚', 'leche': '🥛',
-                  'yogur': '🥣', 'queso': '🧀', 'mantequilla': '🧈', 'otros': '📦', 'pollo': '🍗',
-                  'res': '🥩', 'salchichas': '🌭', 'jamón': '🍖', 'frutas': '🍎', 'verduras': '🥦',
-                  'tubérculos': '🥔', 'gaseosas': '🥤', 'jugos': '🧃', 'aguas': '💧', 'energéticas': '⚡',
-                  'chocolates': '🍫', 'papas': '🍟', 'galletas': '🍪', 'caramelos': '🍬',
-                  'cremoladas': '🍧', 'paletas': '🍡', 'conos': '🍦', 'lavavajillas': '🧽',
-                  'detergentes': '🧴', 'multiusos': '🧹', 'jabones': '🧼', 'shampoo': '🧴',
-                  'desodorantes': '🧴', 'papel higiénico': '🧻', 'alimento perro': '🐶',
-                  'alimento gato': '🐱', 'accesorios': '🎾', 'vasos': '🥤', 'platos': '🍽️',
-                  'cubiertos': '🍴', 'bolsas': '🛍️', 'pan': '🥖', 'pan especial': '🥯',
-                };
-                const emoji = iconMap[subcat.trim().toLowerCase()] || '🍽️';
+                const Icon = getSubcategoryIcon(subcat);
+                const isSelected = selectedSubcategory === subcat;
+
                 return (
                   <button
                     key={subcat}
                     onClick={() => setSelectedSubcategory(subcat)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold transition-all border-2 shrink-0 ${selectedSubcategory === subcat
-                      ? 'border-emerald-500 bg-emerald-600 text-white shadow-lg'
-                      : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 hover:border-emerald-200'
+                    className={`group flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 border shrink-0 ${isSelected
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
                       }`}
                   >
-                    <span className="text-xl leading-none">{emoji}</span>
-                    <span className="text-sm capitalize">{subcat}</span>
+                    <Icon size={16} className={`transition-transform duration-200 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`} />
+                    <span className="capitalize">{subcat}</span>
                   </button>
                 );
               })}
@@ -400,7 +412,11 @@ const POS: React.FC = () => {
             </div>
           ) : (
             <>
-              <ProductGrid products={paginatedProducts} onAddToCart={handleAddToCart} />
+              <ProductGrid
+                products={paginatedProducts}
+                onAddToCart={handleAddToCart}
+                getAvailableStock={getAvailableStock}
+              />
               {/* Paginación */}
               <div className="mt-4 flex justify-center space-x-2">
                 {Array.from({ length: Math.ceil(filteredProducts.length / productsPerPage) }).map((_, index) => (

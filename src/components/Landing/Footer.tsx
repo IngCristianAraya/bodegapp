@@ -1,5 +1,5 @@
 import React from 'react';
-import { Store, Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
+import { Store, Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 const Footer = () => {
@@ -44,20 +44,19 @@ const Footer = () => {
                         <h3 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Contacto</h3>
                         <ul className="space-y-3 text-sm">
                             <li className="flex items-center gap-2">
-                                <Mail size={16} className="text-emerald-500" /> fabrizio@bodegapp.com
+                                <Mail size={16} className="text-emerald-500" /> ingcristian.araya@gmail.com
                             </li>
                             <li className="flex items-center gap-2">
-                                <Phone size={16} className="text-emerald-500" /> +51 999 999 999
+                                <Phone size={16} className="text-emerald-500" /> +51 901 426 737
                             </li>
                             <li className="flex items-center gap-2">
                                 <MapPin size={16} className="text-emerald-500" /> Lima, Perú
                             </li>
                         </ul>
                         <div className="flex gap-4 mt-6">
-                            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Facebook size={20} /></a>
-                            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Instagram size={20} /></a>
-                            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Twitter size={20} /></a>
-                            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Linkedin size={20} /></a>
+                            <a href="https://www.facebook.com/casquillomatik" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-blue-500 transition-colors"><Facebook size={20} /></a>
+                            <a href="https://www.instagram.com/cristian_aaj/" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-pink-500 transition-colors"><Instagram size={20} /></a>
+                            <a href="https://www.linkedin.com/in/ingcristianaraya/" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-blue-400 transition-colors"><Linkedin size={20} /></a>
                         </div>
                     </div>
                 </div>
