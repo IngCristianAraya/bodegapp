@@ -260,8 +260,7 @@ const Reports: React.FC = () => {
     return true;
   };
 
-  // Refactor return to debug syntax error
-  const content = (
+  return (
     <div className="space-y-6 animate-in fade-in zoom-in duration-500">
 
       {/* Header Area */}
@@ -592,8 +591,6 @@ const Reports: React.FC = () => {
 
       </div>
       );
-
-      return content;
 };
 
       // Adapta la venta seleccionada a la estructura esperada por TicketVenta
