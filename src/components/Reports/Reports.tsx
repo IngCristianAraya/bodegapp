@@ -223,13 +223,40 @@ const Reports: React.FC = () => {
 
   const filterVentas = (v: Sale) => {
     if (!fechaInicio && !fechaFin) return true;
-    let fecha = null;
-    if (v.createdAt instanceof Date) fecha = v.createdAt;
-    else if (v.createdAt && typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number') fecha = new Date((v.createdAt as { seconds: number }).seconds * 1000);
-    else if (typeof v.createdAt === 'string') fecha = new Date(v.createdAt);
+
+    let fecha: Date | null = null;
+
+    // Handle different date formats safely
+    if (v.createdAt instanceof Date) {
+      fecha = v.createdAt;
+    } else if (typeof v.createdAt === 'string') {
+      fecha = new Date(v.createdAt);
+    } else if (
+      v.createdAt &&
+      typeof v.createdAt === 'object' &&
+      'seconds' in v.createdAt
+    ) {
+      // Handle Firestore Timestamp like objects
+      const timestamp = v.createdAt as { seconds: number };
+      if (typeof timestamp.seconds === 'number') {
+        fecha = new Date(timestamp.seconds * 1000);
+      }
+    }
+
     if (!fecha || isNaN(fecha.getTime())) return false;
-    if (fechaInicio && fecha < new Date(fechaInicio + 'T00:00:00')) return false;
-    if (fechaFin && fecha > new Date(fechaFin + 'T23:59:59')) return false;
+
+    if (fechaInicio) {
+      const start = new Date(fechaInicio);
+      start.setHours(0, 0, 0, 0);
+      if (fecha < start) return false;
+    }
+
+    if (fechaFin) {
+      const end = new Date(fechaFin);
+      end.setHours(23, 59, 59, 999);
+      if (fecha > end) return false;
+    }
+
     return true;
   };
 
