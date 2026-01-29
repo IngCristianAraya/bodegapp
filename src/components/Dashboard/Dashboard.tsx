@@ -363,7 +363,7 @@ const Dashboard: FC = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => `S /.${value.toFixed(2)} `}
+                  formatter={(value: number | undefined) => `S /.${(value ?? 0).toFixed(2)} `}
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     borderRadius: '12px',
