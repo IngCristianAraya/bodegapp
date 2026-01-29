@@ -611,11 +611,10 @@ const Reports: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
             )}
 
-      </div>
-      );
+          </div>
+        );
 };
 
-      export default Reports;
+        export default Reports;
