@@ -41,39 +41,29 @@ const Hero = () => {
                     </a>
                 </div>
 
-                {/* Dashboard Preview Mockup */}
+                {/* Dashboard Preview with Real Screenshot */}
                 <div className="mt-20 relative mx-auto max-w-5xl animate-in fade-in zoom-in duration-1000 delay-500">
+                    {/* Green/Cyan Gradient Glow */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-3xl blur opacity-30"></div>
+
+                    {/* Browser Window Frame */}
                     <div className="relative rounded-2xl bg-slate-900 border border-slate-700 p-2 shadow-2xl">
-                        <div className="rounded-xl overflow-hidden bg-slate-800/50 aspect-video flex items-center justify-center relative">
-                            {/* Decorative placeholder for screenshot */}
-                            <div className="absolute inset-0 bg-slate-900 flex flex-col">
-                                <div className="h-14 border-b border-slate-700 flex items-center px-4 gap-4">
-                                    <div className="flex gap-2">
-                                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                    </div>
-                                </div>
-                                <div className="flex-1 flex">
-                                    <div className="w-64 border-r border-slate-700 p-4 hidden md:block">
-                                        <div className="w-full h-8 bg-slate-700/50 rounded mb-4"></div>
-                                        <div className="w-3/4 h-4 bg-slate-700/30 rounded mb-2"></div>
-                                        <div className="w-3/4 h-4 bg-slate-700/30 rounded mb-2"></div>
-                                        <div className="w-3/4 h-4 bg-slate-700/30 rounded mb-2"></div>
-                                    </div>
-                                    <div className="flex-1 p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                            <div className="h-24 bg-slate-700/30 rounded-xl border border-slate-700/50"></div>
-                                            <div className="h-24 bg-slate-700/30 rounded-xl border border-slate-700/50"></div>
-                                            <div className="h-24 bg-slate-700/30 rounded-xl border border-slate-700/50"></div>
-                                        </div>
-                                        <div className="w-full h-64 bg-slate-700/20 rounded-xl border border-slate-700/50 flex items-center justify-center">
-                                            <span className="text-slate-500 font-medium">Dashboard Preview</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* Browser Top Bar */}
+                        <div className="h-8 border-b border-slate-700 flex items-center px-3 gap-2 bg-slate-800/80 rounded-t-xl">
+                            <div className="flex gap-1.5">
+                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             </div>
+                        </div>
+
+                        {/* Real Dashboard Screenshot */}
+                        <div className="rounded-b-xl overflow-hidden">
+                            <img
+                                src="https://res.cloudinary.com/do2rpqupm/image/upload/v1769659437/Captura_bodegapp_ksruaz.png"
+                                alt="BodegApp Dashboard Preview"
+                                className="w-full h-auto"
+                            />
                         </div>
                     </div>
                 </div>
