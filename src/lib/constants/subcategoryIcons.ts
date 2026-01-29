@@ -25,7 +25,7 @@ import {
 
     // Bebidas
     CupSoda, // Gaseosas
-    Coffee, // Jugos (simulado)
+    // Coffee, // Jugos (simulado) - REMOVED UNUSED
     GlassWater, // Aguas
     Zap, // Energéticas
 
@@ -45,9 +45,9 @@ import {
     Bone, // Accesorios
 
     // Descartables
-    Trash2, // Bolsas, Vasos
+    // Trash2, // Bolsas, Vasos - REMOVED UNUSED
     ChefHat, // Repostería
-    Snowflake, // Congelados
+    // Snowflake, // Congelados - REMOVED UNUSED
     ShoppingBag,
     LucideIcon
 } from 'lucide-react';

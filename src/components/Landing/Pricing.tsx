@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 

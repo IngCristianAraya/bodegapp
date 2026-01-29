@@ -11,7 +11,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
-import CategoryBadge from "@/components/common/CategoryBadge";
+// import CategoryBadge from "@/components/common/CategoryBadge";
 
 import { crearVenta, obtenerVentas } from "@/lib/supabaseSales";
 import { getStoreSettings, StoreSettings } from "@/lib/supabaseSettings";
@@ -352,8 +352,8 @@ const POS: React.FC = () => {
                     setSelectedSubcategory(null);
                   }}
                   className={`group flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${selectedCategory === null
-                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
                     }`}
                 >
                   <Package size={16} className={`transition-transform duration-200 ${selectedCategory === null ? 'scale-110' : 'group-hover:scale-110'}`} />
@@ -371,8 +371,8 @@ const POS: React.FC = () => {
                       setSelectedSubcategory(null);
                     }}
                     className={`group flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 border ${selectedCategory === cat
-                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
-                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200/50'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-gray-200 dark:border-slate-700 hover:border-emerald-200 hover:text-emerald-600 dark:hover:text-emerald-400'
                       }`}
                   >
                     <span className={`text-base leading-none transition-transform duration-200 ${selectedCategory === cat ? 'scale-110' : 'group-hover:scale-110'}`}>
