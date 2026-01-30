@@ -8,7 +8,8 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
-  Calendar
+  Calendar,
+  Package
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import StatsCard from './StatsCard';
@@ -37,7 +38,7 @@ const Dashboard: FC = () => {
   const toast = useToast();
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
-  const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number }[]>([]);
+  const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number; imageUrl?: string }[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
   const [hasShownAlert, setHasShownAlert] = useState(false);
 
@@ -121,7 +122,7 @@ const Dashboard: FC = () => {
 
   const procesarProductosVendidos = useCallback((ventas: Sale[], productos: Product[]) => {
     const ventasFiltradas = filtrarVentasPorPeriodo(ventas, selectedPeriod);
-    const productosVendidos = new Map<string, { name: string; sales: number; revenue: number }>();
+    const productosVendidos = new Map<string, { name: string; sales: number; revenue: number; imageUrl?: string }>();
 
     ventasFiltradas.forEach(venta => {
       (venta.items || []).forEach(item => {
@@ -132,11 +133,12 @@ const Dashboard: FC = () => {
         const precio = Number(item.unitPrice) || 0;
         const total = Number(item.total) || precio * cantidad;
 
-        const existente = productosVendidos.get(producto.id) || { name: producto.name, sales: 0, revenue: 0 };
+        const existente = productosVendidos.get(producto.id) || { name: producto.name, sales: 0, revenue: 0, imageUrl: producto.imageUrl };
         productosVendidos.set(producto.id, {
           name: producto.name,
           sales: existente.sales + cantidad,
-          revenue: existente.revenue + total
+          revenue: existente.revenue + total,
+          imageUrl: producto.imageUrl
         });
       });
     });
@@ -392,7 +394,8 @@ const Dashboard: FC = () => {
         </div>
 
         {/* Top Products Table */}
-        <div className="col-span-1 lg:col-span-2 glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
+        {/* Top Products Table */}
+        <div className="col-span-1 lg:col-span-2 glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 min-h-[350px] h-full">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Top Productos</h3>
             <div className="flex bg-gray-100 dark:bg-slate-700/50 p-1 rounded-lg">
@@ -400,8 +403,8 @@ const Dashboard: FC = () => {
                 <button
                   key={p}
                   onClick={() => setSelectedPeriod(p)}
-                  className={`px - 3 py - 1 rounded - md text - xs font - bold transition - all ${selectedPeriod === p ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    } `}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedPeriod === p ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-700 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
                 >
                   {p === 'day' ? 'Hoy' : p === 'week' ? 'Semana' : 'Mes'}
                 </button>
@@ -413,11 +416,18 @@ const Dashboard: FC = () => {
             {topProducts.map((product, index) => (
               <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100/80 dark:border-gray-700/50 last:border-0 hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors px-3 rounded-lg group">
                 <div className="flex items-center gap-3">
-                  <div className={`w - 8 h - 8 rounded - lg flex items - center justify - center font - bold text - sm shadow - sm ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-200 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-emerald-50 text-emerald-700'} `}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shadow-sm shrink-0 ${index === 0 ? 'bg-yellow-100 text-yellow-700' : index === 1 ? 'bg-gray-200 text-gray-700' : index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-emerald-50 text-emerald-700'}`}>
                     #{index + 1}
                   </div>
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded-lg object-cover shadow-sm bg-white" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400">
+                      <Package size={20} />
+                    </div>
+                  )}
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{product.name}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">{product.name}</p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">{product.sales} ventas</p>
                   </div>
                 </div>
@@ -429,26 +439,31 @@ const Dashboard: FC = () => {
         </div>
 
         {/* Rotation Alert */}
-        <div className="col-span-1 lg:col-span-2">
-          <RotationAlert deadStock={rotationData.dead} slowMoving={rotationData.slow} />
+        <div className="col-span-1 lg:col-span-2 h-full flex flex-col">
+          <RotationAlert
+            deadStock={rotationData.dead}
+            slowMoving={rotationData.slow}
+            topProducts={topProducts}
+          />
         </div>
 
         {/* Stock Prediction */}
-        <div className="col-span-1 lg:col-span-2">
+        <div className="col-span-1 lg:col-span-2 h-full flex flex-col">
           <StockPredictionAlert
             criticalAlerts={stockPredictions.critical}
             warningAlerts={stockPredictions.warning}
+            totalProducts={productos.length}
           />
         </div>
 
         {/* Profitability Matrix */}
-        <div className="col-span-1 lg:col-span-2">
+        <div className="col-span-1 lg:col-span-2 h-full flex flex-col">
           <ProfitabilityMatrix profitabilityData={profitabilityData} averageMargin={averageMargin} />
         </div>
 
         {/* Temporal Comparison */}
         {temporalData && (
-          <div className="col-span-1 lg:col-span-2">
+          <div className="col-span-1 lg:col-span-2 h-full flex flex-col">
             <TemporalComparison
               weekComparison={temporalData.weekComparison}
               monthComparison={temporalData.monthComparison}
@@ -458,7 +473,7 @@ const Dashboard: FC = () => {
         )}
 
         {/* Quick Actions or Other Info */}
-        <div className="col-span-1 lg:col-span-2 glass-card rounded-3xl p-6 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 text-white">
+        <div className="col-span-1 lg:col-span-2 glass-card rounded-3xl p-6 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-800 text-white h-full">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-fullblur-3xl -translate-y-1/2 translate-x-1/2" />
 
           <h3 className="text-xl font-bold mb-2 relative z-10">Resumen Rápido</h3>
@@ -472,6 +487,17 @@ const Dashboard: FC = () => {
               <p className="text-2xl font-bold">
                 S/. {productos.reduce((acc, p) => acc + ((p.stock || 0) * (p.costPrice || 0)), 0).toLocaleString('es-PE', { maximumFractionDigits: 0 })}
               </p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
+              <p className="text-emerald-100 text-sm mb-1">Stock Crítico</p>
+              <p className="text-2xl font-bold flex items-center gap-2">
+                {stockBajo}
+                {stockBajo > 0 && <span className="text-xs bg-red-500/80 text-white px-2 py-0.5 rounded-full">¡Atención!</span>}
+              </p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
+              <p className="text-emerald-100 text-sm mb-1">Categorías</p>
+              <p className="text-2xl font-bold">{new Set(productos.map(p => p.category)).size}</p>
             </div>
           </div>
         </div>

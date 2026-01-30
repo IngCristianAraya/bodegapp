@@ -35,11 +35,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
   const subcategoryRequired = !!hasSubcategories;
   const missingSubcategory = subcategoryRequired && (!form.subcategory || form.subcategory.trim() === '');
 
-  // Categorías exoneradas de IGV
-  const exemptCategories = [
-    'frutas', 'verduras', 'frutas y verduras', 'legumbres', 'tubérculos', 'leche cruda', 'pescados', 'mariscos', 'huevos', 'carne de ave', 'huevos y lácteos'
-  ];
-
   // Validación centralizada
   const isValid = (): boolean => {
     const requiredFields: (keyof Product)[] = ['name', 'category', 'salePrice', 'costPrice'];
@@ -52,13 +47,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }) && !missingSubcategory;
   };
 
-
-
   // Submit controlado
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid()) {
-      showToast('No puedes dejar el campo &quot;Nombre&quot; vacío.', 'error');
+      showToast('No puedes dejar el campo "Nombre" vacío.', 'error');
       return;
     }
     try {
@@ -69,21 +62,74 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
+  // Lógica Avanzada de Exoneración de IGV (Perú)
+  const checkIGVExemption = (category: string, subcategory: string = ''): boolean => {
+    const cat = category.toLowerCase().trim();
+    const sub = subcategory.toLowerCase().trim();
 
-  // Inicializa isExemptIGV/isExonerated automáticamente según la categoría y controla el checkbox
+    // 1. Categorías enteramente exoneradas
+    if (
+      cat.includes('frutas y verduras') ||
+      cat === 'frutas' ||
+      cat === 'verduras' ||
+      cat === 'tubérculos'
+    ) return true;
+
+    // 2. Lógica por Subcategoría
+    // Huevos y Lácteos: Huevos/Leche Fresca -> Exonerado. Leche ind./Yogur/Queso -> Gravado
+    if (cat.includes('huevos') || cat.includes('lácteos')) {
+      if (sub.includes('huevo') || sub.includes('fresca') || sub.includes('cruda')) return true;
+      return false;
+    }
+
+    // Carnes: Pollo, Res, Cerdo, Pescado (Frescos) -> Exonerado. Embutidos -> Gravado
+    if (cat.includes('carnes') || cat.includes('embutidos')) {
+      // Exonerados: Carnes frescas
+      const exemptMeats = ['pollo', 'res', 'cerdo', 'pavo', 'pescado', 'marisco', 'cuy', 'pato', 'carne'];
+      const isMeat = exemptMeats.some(m => sub.includes(m));
+      // Gravados: Procesados/Embutidos
+      const isProcessed = ['jamón', 'salchicha', 'chorizo', 'tocino', 'hamburguesa', 'nugget'].some(p => sub.includes(p));
+
+      return isMeat && !isProcessed;
+    }
+
+    // Abarrotes: Menestras/Legumbres (Secas), Arroz, Azúcar -> Exonerado
+    if (cat.includes('abarrotes')) {
+      const exemptBasics = ['menestra', 'lenteja', 'frijol', 'allar', 'garbanzo', 'arroz', 'fideo']; // Fideos usualmente exonerados en canasta básica temporal
+      return exemptBasics.some(b => sub.includes(b));
+    }
+
+    return false;
+  };
+
+  // State for custom category input (allow typing new categories)
   const [forceExempt, setForceExempt] = React.useState(false);
+  const [customMode, setCustomMode] = React.useState(() => {
+    return !!(form.category && !categoryData[form.category as keyof typeof categoryData]);
+  });
+
+  // Effect: Recalcular Exoneración cuando cambia Categoría O Subcategoría
   React.useEffect(() => {
     if (form.category) {
-      const isExempt = exemptCategories.some(cat => form.category.toLowerCase().includes(cat));
+      const isExempt = checkIGVExemption(form.category, form.subcategory);
       setForceExempt(isExempt);
-      if (form.isExemptIGV !== isExempt || form.isExonerated !== isExempt) {
-        setForm({ ...form, isExemptIGV: isExempt, isExonerated: isExempt });
+
+      // Solo sobrescribir si el usuario no lo ha cambiado manualmente (o forzar siempre si es política estricta)
+      // Para UX: Si el sistema detecta exonerado, lo marca. Si no, lo deja como estaba o marca false.
+      if (isExempt) {
+        setForm({ ...form, isExemptIGV: true, isExonerated: true });
+      } else {
+        // Si deja de ser categoría exonerada, desmarcamos (opcional, pero ayuda a corregir)
+        // Ojo: Si el usuario marcó manualmente algo fuera de la lógica, esto lo borraria. 
+        // Mejor solo forzar TRUE. Para FALSE dejar libertad o solo sugerir.
+        // En este caso, para limpiar "Huevos" -> "Leche", debemos poder desmarcar.
+        setForm({ ...form, isExemptIGV: false, isExonerated: false });
       }
     } else {
       setForceExempt(false);
     }
     // eslint-disable-next-line
-  }, [form.category]);
+  }, [form.category, form.subcategory]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-white dark:bg-slate-900">
@@ -200,8 +246,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Categoría</label>
           <select
             className={inputClass}
-            value={form.category || ''}
-            onChange={e => setForm({ ...form, category: e.target.value, subcategory: '' })}
+            value={customMode ? '__NEW__' : (form.category || '')}
+            onChange={e => {
+              const val = e.target.value;
+              if (val === '__NEW__') {
+                setCustomMode(true);
+                setForm({ ...form, category: '', subcategory: '' });
+              } else {
+                setCustomMode(false);
+                setForm({ ...form, category: val, subcategory: '' });
+              }
+            }}
             required
           >
             <option value="">Selecciona una categoría</option>
@@ -210,7 +265,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
               .map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
+            <option value="__NEW__">➕ Crear nueva categoría...</option>
           </select>
+          {customMode && (
+            <input
+              type="text"
+              placeholder="Escribe el nombre de la nueva categoría"
+              className={`${inputClass} mt-2 border-emerald-500 ring-1 ring-emerald-500`}
+              autoFocus
+              value={form.category || ''}
+              onChange={e => setForm({ ...form, category: e.target.value })}
+            />
+          )}
         </div>
         {/* Subcategoría (dinámica según categoría) */}
         <div className="flex flex-col">

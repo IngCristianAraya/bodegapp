@@ -22,7 +22,12 @@ import { Product } from '../../types/inventory';
 import { CartItem } from '../../types/index';
 import { categoryData, CategoryKey } from '@/lib/constants/categoryData';
 import { getSubcategoryIcon } from '@/lib/constants/subcategoryIcons';
-import { ArrowLeft, Package } from 'lucide-react';
+import { useCashRegister } from '@/hooks/useCashRegister';
+import CashRegisterModal from '../CashRegister/CashRegisterModal';
+import CashMovementsModal from '../CashRegister/CashMovementsModal';
+import CashHistoryModal from '../CashRegister/CashHistoryModal';
+import { Search, ShoppingCart, Menu, X, Trash2, Plus, Minus, Package, ChevronRight, Filter, AlertOctagon, RefreshCcw, Lock, ArrowLeft, Tag, History as HistoryIcon } from 'lucide-react';
+
 
 const POS: React.FC = () => {
   const [showTicket, setShowTicket] = useState(false);
@@ -54,7 +59,28 @@ const POS: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const { tenant } = useTenant();
   const { showToast } = useToast();
-  const { products, loading } = useProducts(tenant?.id);
+  const { products, loading: productsLoading } = useProducts(tenant?.id);
+
+  const { cashRegister, loading: registerLoading, checkRegisterStatus } = useCashRegister();
+
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerMode, setRegisterMode] = useState<'open' | 'close'>('open');
+
+  const [showMovementsModal, setShowMovementsModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Check register status on mount
+  useEffect(() => {
+    if (!registerLoading && !cashRegister) {
+      setRegisterMode('open');
+      setShowRegisterModal(true);
+    }
+  }, [cashRegister, registerLoading]);
+
+  // Bloqueo de UI si no hay caja abierta
+  const isRegisterOpen = !!cashRegister;
+
+
 
   const { state, addItem, clearCart, removeItem, updateQuantity, setDiscount } = useCart();
   const { user } = useAuth();
@@ -93,8 +119,19 @@ const POS: React.FC = () => {
     }
   }, [showTicket, tenant?.id]);
 
-  // Extraer categorías y subcategorías desde categoryData
-  const categoryList = (Object.keys(categoryData).filter(cat => cat !== 'all') as CategoryKey[]);
+  // Derivar lista completa de categorías (Fijas + Personalizadas de productos)
+  const categoryList = React.useMemo(() => {
+    const cats = new Set<string>();
+    // 1. Agregar las fijas primero para mantener orden
+    Object.keys(categoryData).filter(c => c !== 'all').forEach(c => cats.add(c));
+    // 2. Agregar las que vengan de los productos (personalizadas)
+    products.forEach(p => {
+      if (p.category && p.category.trim() !== '') {
+        cats.add(p.category);
+      }
+    });
+    return Array.from(cats);
+  }, [products]);
 
   // --- Restaurar lógica de paginación ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -316,10 +353,62 @@ const POS: React.FC = () => {
     }
   };
 
+  // Debug render
+  // console.log('POS Render');
+
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Punto de Venta</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Punto de Venta</h1>
+
+          {/* Cash Control Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowHistoryModal(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
+              title="Historial de Auditoría"
+            >
+              <HistoryIcon size={16} />
+              <span className="hidden lg:inline">Historial</span>
+            </button>
+
+            {isRegisterOpen ? (
+              <>
+                <button
+                  onClick={() => setShowMovementsModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
+                  title="Movimientos de Caja"
+                >
+                  <RefreshCcw size={16} />
+                  <span className="hidden lg:inline">Movimientos</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setRegisterMode('close');
+                    setShowRegisterModal(true);
+                  }}
+                  className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm"
+                  title="Cerrar Caja"
+                >
+                  <Lock size={16} />
+                  <span className="hidden lg:inline">Cerrar Caja</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setRegisterMode('open');
+                  setShowRegisterModal(true);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors animate-pulse shadow-sm"
+              >
+                <AlertOctagon size={16} />
+                <span className="font-bold">CAJA CERRADA</span>
+              </button>
+            )}
+          </div>
+        </div>
         <ProductSearch onSearch={handleSearch} onBarcodeSearch={handleBarcodeSearch} />
       </div>
 
@@ -362,7 +451,13 @@ const POS: React.FC = () => {
               )}
 
               {selectedCategory === null && categoryList.map((cat) => {
-                const data = categoryData[cat];
+                // Info de categoría o fallback genérico
+                const data = categoryData[cat as CategoryKey] || {
+                  icon: <Tag size={18} />,
+                  color: 'bg-gray-100',
+                  abbr: cat.substring(0, 2).toUpperCase()
+                };
+
                 return (
                   <button
                     key={cat}
@@ -384,7 +479,11 @@ const POS: React.FC = () => {
               })}
 
               {/* Subcategories (Visible only when a category is selected) */}
-              {selectedCategory !== null && (categoryData[selectedCategory as CategoryKey]?.subcategories || []).map((subcat) => {
+              {selectedCategory !== null && (
+                (categoryData[selectedCategory as CategoryKey]?.subcategories?.length ?? 0) > 0
+                  ? categoryData[selectedCategory as CategoryKey].subcategories!
+                  : Array.from(new Set(products.filter(p => p.category === selectedCategory && p.subcategory).map(p => p.subcategory!)))
+              ).map((subcat) => {
                 const Icon = getSubcategoryIcon(subcat);
                 const isSelected = selectedSubcategory === subcat;
 
@@ -401,12 +500,13 @@ const POS: React.FC = () => {
                     <span className="capitalize">{subcat}</span>
                   </button>
                 );
-              })}
+              })
+              }
             </div>
           </div>
 
           {/* Products Grid */}
-          {loading ? (
+          {productsLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
             </div>
@@ -452,60 +552,89 @@ const POS: React.FC = () => {
           />
         </div>
       </div>
-      {showSuccess && (
-        <SuccessToast message={successMsg} onClose={() => setShowSuccess(false)} />
-      )}
+      {
+        showSuccess && (
+          <SuccessToast message={successMsg} onClose={() => setShowSuccess(false)} />
+        )
+      }
       {/* Modal de ticket/boleta tras venta exitosa */}
-      {showTicket && ventaTicket && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl flex flex-col items-center">
-            <TicketVenta ref={ticketRef} venta={ventaTicket} settings={storeSettings} />
-            <div className="flex justify-center gap-4 mt-8 w-full">
-              <button
-                className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-400 font-semibold transition-all duration-150"
-                title="Imprimir ticket (Ctrl+P)"
-                onClick={async () => {
-                  try {
-                    await handlePrint?.();
-                  } catch {
-                    alert('No se pudo abrir el diálogo de impresión. Verifica permisos del navegador o prueba otro navegador.');
-                  }
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7m-6 13v-4m0 4H6a2 2 0 01-2-2v-5a2 2 0 012-2h12a2 2 0 012 2v5a2 2 0 01-2 2h-6z" /></svg>
-                Imprimir ticket
-              </button>
-              <button
-                className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 font-semibold transition-all duration-150 border border-gray-300"
-                title="Cerrar ticket"
-                onClick={() => setShowTicket(false)}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                Cancelar
-              </button>
+      {
+        showTicket && ventaTicket && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 max-w-lg w-full mx-auto border border-gray-200 shadow-2xl flex flex-col items-center">
+              <TicketVenta ref={ticketRef} venta={ventaTicket} settings={storeSettings} />
+              <div className="flex justify-center gap-4 mt-8 w-full">
+                <button
+                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg shadow-md hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-400 font-semibold transition-all duration-150"
+                  title="Imprimir ticket (Ctrl+P)"
+                  onClick={async () => {
+                    try {
+                      await handlePrint?.();
+                    } catch {
+                      alert('No se pudo abrir el diálogo de impresión. Verifica permisos del navegador o prueba otro navegador.');
+                    }
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7m-6 13v-4m0 4H6a2 2 0 01-2-2v-5a2 2 0 012-2h12a2 2 0 012 2v5a2 2 0 01-2 2h-6z" /></svg>
+                  Imprimir ticket
+                </button>
+                <button
+                  className="flex items-center gap-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg shadow-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 font-semibold transition-all duration-150 border border-gray-300"
+                  title="Cerrar ticket"
+                  onClick={() => setShowTicket(false)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
+
+      {/* Cash Register Modals */}
+      <CashRegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => {
+          if (isRegisterOpen) setShowRegisterModal(false);
+        }}
+        mode={registerMode}
+        onSuccess={() => {
+          checkRegisterStatus();
+        }}
+        settings={storeSettings}
+      />
+
+      <CashMovementsModal
+        isOpen={showMovementsModal}
+        onClose={() => setShowMovementsModal(false)}
+      />
+
+      <CashHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+      />
 
       {/* Modal para ingresar Peso (kg) */}
-      {showPesoModal && productForPeso && (
-        <ModalPeso
-          open={showPesoModal}
-          stockDisponible={productForPeso.stock || 0}
-          onClose={() => {
-            setShowPesoModal(false);
-            setProductForPeso(null);
-          }}
-          onConfirm={(peso) => {
-            handleAddToCart(productForPeso, peso);
-            setShowPesoModal(false);
-            setProductForPeso(null);
-            showToast(`Añadido: ${peso}kg de ${productForPeso.name}`, 'success');
-          }}
-        />
-      )}
-    </div>
+      {
+        showPesoModal && productForPeso && (
+          <ModalPeso
+            open={showPesoModal}
+            stockDisponible={productForPeso.stock || 0}
+            onClose={() => {
+              setShowPesoModal(false);
+              setProductForPeso(null);
+            }}
+            onConfirm={(peso) => {
+              handleAddToCart(productForPeso, peso);
+              setShowPesoModal(false);
+              setProductForPeso(null);
+              showToast(`Añadido: ${peso}kg de ${productForPeso.name}`, 'success');
+            }}
+          />
+        )
+      }
+    </div >
   );
 };
 export default POS;

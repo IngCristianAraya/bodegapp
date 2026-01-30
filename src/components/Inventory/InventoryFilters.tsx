@@ -85,7 +85,7 @@ const InventoryFilters: React.FC<InventoryFiltersProps> = ({
             onChange={e => onFiltersChange({ ...filters, category: e.target.value })}
             aria-label="Filtrar por categoría"
           >
-            <option value="all">Todas</option>
+            <option value="">Todas</option>
             <option value="Abarrotes">Abarrotes</option>
             <option value="Huevos y Lácteos">Huevos y Lácteos</option>
             <option value="Carnes y Embutidos">Carnes y Embutidos</option>

@@ -49,7 +49,7 @@ const TicketVenta = forwardRef<HTMLDivElement, TicketVentaProps>(({ venta, setti
       <div style={{ fontSize: '10px', marginBottom: '10px', textTransform: 'uppercase' }}>
         <div className="flex justify-between"><span>FECHA:</span> <span>{venta.date}</span></div>
         <div className="flex justify-between"><span>CAJERO:</span> <span>{venta.cashierName}</span></div>
-        <div className="flex justify-between"><span>PAGO:</span> <span>{venta.paymentMethod}</span></div>
+        <div className="flex justify-between"><span>PAGO:</span> <span>{['CASH', 'cash'].includes(venta.paymentMethod) ? 'EFECTIVO' : venta.paymentMethod}</span></div>
         {venta.customerName && (
           <div className="flex justify-between"><span>CLIENTE:</span> <span>{venta.customerName}</span></div>
         )}

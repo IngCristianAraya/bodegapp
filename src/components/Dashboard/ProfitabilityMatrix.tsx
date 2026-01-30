@@ -21,7 +21,7 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
     };
 
     return (
-        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
+        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 min-h-[350px] flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Matriz de Rentabilidad</h3>
@@ -32,11 +32,11 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-                {/* Estrellas */}
+                {/* Estrellas -> Productos Estrella */}
                 <div className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-2xl border border-yellow-200 dark:border-yellow-800">
                     <div className="flex items-center gap-2 mb-3">
                         <Star className="text-yellow-600 dark:text-yellow-400" size={18} fill="currentColor" />
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Estrellas</h4>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Productos Estrella</h4>
                         <span className="ml-auto text-xs font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/40 px-2 py-0.5 rounded-full">
                             {stars.length}
                         </span>
@@ -52,11 +52,11 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
                     ))}
                 </div>
 
-                {/* Vacas Lecheras */}
+                {/* Vacas Lecheras -> Flujo Constante */}
                 <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200 dark:border-green-800">
                     <div className="flex items-center gap-2 mb-3">
                         <DollarSign className="text-green-600 dark:text-green-400" size={18} />
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Vacas Lecheras</h4>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Flujo Constante</h4>
                         <span className="ml-auto text-xs font-bold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full">
                             {cashCows.length}
                         </span>
@@ -72,11 +72,11 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
                     ))}
                 </div>
 
-                {/* Interrogantes */}
+                {/* Interrogantes -> Potencial / Nicho */}
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center gap-2 mb-3">
                         <HelpCircle className="text-blue-600 dark:text-blue-400" size={18} />
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Interrogantes</h4>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Potencial / Nicho</h4>
                         <span className="ml-auto text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full">
                             {questionMarks.length}
                         </span>
@@ -92,11 +92,11 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
                     ))}
                 </div>
 
-                {/* Perros */}
+                {/* Perros -> Baja Rotación */}
                 <div className="p-4 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 rounded-2xl border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2 mb-3">
                         <TrendingDown className="text-gray-600 dark:text-gray-400" size={18} />
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Perros</h4>
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Baja Rotación</h4>
                         <span className="ml-auto text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
                             {dogs.length}
                         </span>
@@ -115,7 +115,7 @@ const ProfitabilityMatrix: React.FC<ProfitabilityMatrixProps> = ({ profitability
 
             <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
                 <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">
-                    💡 <strong>Estrategia:</strong> Enfócate en las Estrellas, mantén las Vacas Lecheras, decide sobre los Interrogantes y considera descontinuar los Perros.
+                    💡 <strong>Estrategia:</strong> Impulsa los <strong>Productos Estrella</strong>, mantén el <strong>Flujo Constante</strong>, promociona los de <strong>Potencial</strong> y evalúa los de <strong>Baja Rotación</strong>.
                 </p>
             </div>
         </div>

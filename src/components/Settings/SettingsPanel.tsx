@@ -272,6 +272,26 @@ const SettingsPanel: React.FC = () => {
                             <p className="text-[10px] text-gray-400 font-medium ml-1">Esta clave se solicitará para ajustar stock, cambiar precios o eliminar productos.</p>
                         </div>
 
+                        <div className="col-span-2 space-y-2">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">PIN de Caja (Supervisor)</label>
+                            <div className="relative">
+                                <Lock className="absolute left-4 top-3.5 w-5 h-5 text-emerald-500" />
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={4}
+                                    value={settings?.admin_pin || ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                        setSettings(prev => prev ? { ...prev, admin_pin: val } : null);
+                                    }}
+                                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-gray-900 dark:text-white font-mono font-bold tracking-widest"
+                                    placeholder="0000"
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-medium ml-1">PIN de 4 dígitos para autorizar Cierres de Caja y visualizar montos reales.</p>
+                        </div>
+
                         {/* Ticket Customization */}
                         <div className="col-span-2 pt-4 flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center">

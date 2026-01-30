@@ -11,6 +11,7 @@ export interface StoreSettings {
     logo_url?: string;
     ticket_footer?: string;
     admin_password?: string;
+    admin_pin?: string; // PIN de 4 dígitos para operaciones de caja
     updated_at?: string;
 }
 

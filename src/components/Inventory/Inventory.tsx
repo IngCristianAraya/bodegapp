@@ -173,7 +173,8 @@ const Inventory: React.FC = () => {
       (product.code && product.code.toLowerCase().includes(filters.code.toLowerCase()));
 
     const matchesCategory = !filters.category || product.category === filters.category;
-    const matchesSupplier = !filters.supplier || product.supplier === filters.supplier;
+    const matchesSupplier = !filters.supplier ||
+      (product.supplier && product.supplier.toLowerCase().includes(filters.supplier.toLowerCase()));
     const matchesLowStock = !filters.lowStock || (product.stock || 0) <= (product.minStock || 0);
 
     return matchesName && matchesCode && matchesCategory && matchesSupplier && matchesLowStock;

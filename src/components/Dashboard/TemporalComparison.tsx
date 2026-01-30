@@ -45,7 +45,7 @@ const TemporalComparison: React.FC<TemporalComparisonProps> = ({ weekComparison,
     };
 
     return (
-        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
+        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 min-h-[350px] flex-1 flex flex-col">
             <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
                     <Calendar className="text-purple-600 dark:text-purple-400" size={20} />

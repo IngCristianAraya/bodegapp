@@ -5,27 +5,48 @@ import type { StockPrediction } from '../../utils/stockPrediction';
 interface StockPredictionAlertProps {
     criticalAlerts: StockPrediction[];
     warningAlerts: StockPrediction[];
+    totalProducts?: number;
 }
 
-const StockPredictionAlert: React.FC<StockPredictionAlertProps> = ({ criticalAlerts, warningAlerts }) => {
+const StockPredictionAlert: React.FC<StockPredictionAlertProps> = ({ criticalAlerts, warningAlerts, totalProducts = 0 }) => {
     const totalAlerts = criticalAlerts.length + warningAlerts.length;
 
     if (totalAlerts === 0) {
         return (
-            <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
+            <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 min-h-[350px] flex-1 flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                         <Package className="text-green-600 dark:text-green-400" size={20} />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Predicción de Stock</h3>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">✅ Todos los productos tienen stock suficiente</p>
+                <div className="flex-1 flex flex-col justify-center items-center gap-6">
+                    <div className="relative">
+                        <div className="w-24 h-24 rounded-full border-4 border-green-100 dark:border-green-900/30 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-col">
+                                <span className="text-2xl font-bold text-green-600 dark:text-green-400">100%</span>
+                            </div>
+                        </div>
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-green-100 dark:bg-green-900/50 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase">Saludable</span>
+                        </div>
+                    </div>
+
+                    <div className="text-center space-y-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            Inventario bajo control
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] mx-auto">
+                            Monitoreando <strong>{totalProducts}</strong> productos. No se detectan quiebres de stock próximos.
+                        </p>
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800">
+        <div className="glass-card rounded-3xl p-6 bg-white/90 dark:bg-slate-900 border border-gray-100 dark:border-gray-800 min-h-[350px] flex-1 flex flex-col">
             <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                     <AlertCircle className="text-orange-600 dark:text-orange-400" size={20} />
