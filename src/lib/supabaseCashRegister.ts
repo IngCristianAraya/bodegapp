@@ -130,13 +130,19 @@ export async function obtenerResumenCaja(registerId: string, tenantId: string): 
 
     if (salesError) throw new Error('Error al calcular ventas');
 
-    const totalSalesCash = sales
-        ?.filter((s: any) => s.payment_method === 'cash')
-        .reduce((sum: number, sale: any) => sum + (Number(sale.total) || 0), 0) || 0;
+    // Define temporary interface for sales accumulator
+    interface SaleCalc {
+        total: number;
+        payment_method: string;
+    }
 
-    const totalSalesDigital = sales
-        ?.filter((s: any) => s.payment_method !== 'cash') // yape, plin, card
-        .reduce((sum: number, sale: any) => sum + (Number(sale.total) || 0), 0) || 0;
+    const totalSalesCash = (sales as SaleCalc[])
+        ?.filter((s) => s.payment_method === 'cash')
+        .reduce((sum: number, sale: SaleCalc) => sum + (Number(sale.total) || 0), 0) || 0;
+
+    const totalSalesDigital = (sales as SaleCalc[])
+        ?.filter((s) => s.payment_method !== 'cash') // yape, plin, card
+        .reduce((sum: number, sale: SaleCalc) => sum + (Number(sale.total) || 0), 0) || 0;
 
     // 3. Obtener movimientos manuales
     const { data: movements, error: movError } = await supabase

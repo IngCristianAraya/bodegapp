@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCashRegister } from '../../hooks/useCashRegister';
-import { X, DollarSign, Calculator, Lock, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
+import { X, Calculator, Lock, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
 
 import { StoreSettings } from '../../lib/supabaseSettings';
 
@@ -13,7 +13,7 @@ interface CashRegisterModalProps {
 }
 
 const CashRegisterModal: React.FC<CashRegisterModalProps> = ({ isOpen, onClose, mode, onSuccess, settings }) => {
-    const { openRegister, closeRegister, fetchSummary, summary, loading: hookLoading } = useCashRegister();
+    const { openRegister, closeRegister, fetchSummary, summary } = useCashRegister();
     const [amount, setAmount] = useState('');
     const [notes, setNotes] = useState('');
     const [loading, setLoading] = useState(false);

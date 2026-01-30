@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { registrarMovimiento } from '../../lib/supabaseCashRegister';
 import { useTenant } from '../../contexts/TenantContext'; // Assuming context exists
 import { useCashRegister } from '../../hooks/useCashRegister';
-import { X, ArrowUpCircle, ArrowDownCircle, DollarSign, FileText } from 'lucide-react';
+import { X, ArrowUpCircle, ArrowDownCircle, FileText } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 
 interface CashMovementsModalProps {

@@ -26,7 +26,7 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import CashRegisterModal from '../CashRegister/CashRegisterModal';
 import CashMovementsModal from '../CashRegister/CashMovementsModal';
 import CashHistoryModal from '../CashRegister/CashHistoryModal';
-import { Search, ShoppingCart, Menu, X, Trash2, Plus, Minus, Package, ChevronRight, Filter, AlertOctagon, RefreshCcw, Lock, ArrowLeft, Tag, History as HistoryIcon } from 'lucide-react';
+import { AlertOctagon, RefreshCcw, Lock, History as HistoryIcon, ArrowLeft, Package, Tag } from 'lucide-react';
 
 
 const POS: React.FC = () => {

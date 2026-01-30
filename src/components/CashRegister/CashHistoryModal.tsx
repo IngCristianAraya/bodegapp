@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../contexts/TenantContext';
-import { X, Calendar, DollarSign, AlertTriangle, CheckCircle, Search, Loader2 } from 'lucide-react';
+import { X, Calendar, AlertTriangle, CheckCircle, Search, Loader2 } from 'lucide-react';
 // import { format } from 'date-fns';
 // import { es } from 'date-fns/locale';
 
