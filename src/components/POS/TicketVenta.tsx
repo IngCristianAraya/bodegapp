@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 
 import React, { forwardRef } from 'react';
 import { StoreSettings } from '@/lib/supabaseSettings';

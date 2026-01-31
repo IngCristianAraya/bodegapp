@@ -11,9 +11,9 @@ import { obtenerHistorialCajas, CashRegister } from '../../lib/supabaseCashRegis
 import { obtenerTodosMovimientosInventario } from '../../lib/supabaseInventory';
 import { getStoreSettings, StoreSettings } from '../../lib/supabaseSettings';
 import { useTenant } from '../../contexts/TenantContext';
-import { Sale, Product, SaleItem, Expense } from '../../types/index';
+import { Sale, Product, Expense } from '../../types/index';
 import { InventoryMovement } from '../../types/inventory';
-import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight, AlertTriangle, TrendingUp, ShoppingCart } from 'lucide-react';
+import { FileText, Download, Printer, Search, ArrowLeft, ArrowRight } from 'lucide-react';
 // import { useSubscription } from '../../contexts/SubscriptionContext'; // Removed Pro check
 
 const Reports: React.FC = () => {
@@ -93,59 +93,68 @@ const Reports: React.FC = () => {
   // --- HEADERS ---
   const ventasHeaders = [
     { key: 'receiptNumber', label: 'N° Boleta' },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { key: 'createdAt', label: 'Fecha', format: (val: any) => new Date(val?.seconds ? val.seconds * 1000 : val).toLocaleDateString() },
     { key: 'cashierName', label: 'Cajero' },
     { key: 'customerName', label: 'Cliente' },
-    { key: 'total', label: 'Total', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'total', label: 'Total', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
     { key: 'paymentMethod', label: 'Método' },
+    { key: 'status', label: 'Estado' }
   ];
 
-  const inventarioHeaders = [
-    { key: 'code', label: 'Código' },
+  const productosHeaders = [
     { key: 'name', label: 'Producto' },
-    { key: 'stock', label: 'Stock' },
-    { key: 'salePrice', label: 'Precio', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
-    { key: 'averageCost', label: 'Costo', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'currentStock', label: 'Stock Actual' },
+    { key: 'costPrice', label: 'Costo Unit.', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'salePrice', label: 'Precio Venta', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'investedCapital', label: 'Capital Invertido', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'potentialProfit', label: 'Ganancia Potencial', format: (val: number) => `S/ ${Number(val).toFixed(2)}` }
   ];
 
   const gastosHeaders = [
-    { key: 'date', label: 'Fecha', format: (val: any) => new Date(val).toLocaleDateString() },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { key: 'date', label: 'Fecha', format: (val: any) => new Date(val?.seconds ? val.seconds * 1000 : val).toLocaleDateString() },
     { key: 'description', label: 'Descripción' },
     { key: 'category', label: 'Categoría' },
-    { key: 'amount', label: 'Monto', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'amount', label: 'Monto', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'method', label: 'Método' }
   ];
 
-  const cierresHeaders = [
-    { key: 'opened_at', label: 'Apertura', format: (val: any) => new Date(val).toLocaleString() },
-    { key: 'closed_at', label: 'Cierre', format: (val: any) => val ? new Date(val).toLocaleString() : '-' },
-    { key: 'total_sales_cash', label: 'V. Efectivo', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
-    { key: 'total_sales_digital', label: 'V. Digital', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
-    { key: 'closing_amount', label: 'En Caja', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
+  const cierreHeaders = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { key: 'startTime', label: 'Apertura', format: (val: any) => new Date(val?.seconds ? val.seconds * 1000 : val).toLocaleString() },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { key: 'endTime', label: 'Cierre', format: (val: any) => val ? new Date(val?.seconds ? val.seconds * 1000 : val).toLocaleString() : 'Abierto' },
+    { key: 'cashierName', label: 'Cajero' },
+    { key: 'totalSales', label: 'Ventas (Calc)', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'expectedTotal', label: 'Esperado', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'actualTotal', label: 'Real', format: (val: number) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'discrepancy', label: 'Diferencia', format: (val: number) => `S/ ${Number(val).toFixed(2)}` }
   ];
 
   const movimientosHeaders = [
-    { key: 'date', label: 'Fecha', format: (val: any) => new Date(val).toLocaleString() },
-    { key: 'productName', label: 'Producto' },
-    { key: 'type', label: 'Tipo', format: (val: any) => String(val).toUpperCase() },
-    { key: 'quantity', label: 'Cantidad' },
-    { key: 'motivo', label: 'Motivo / Justificación' },
-    { key: 'cashierName', label: 'Usuario' },
+    { key: 'created_at', label: 'Fecha', format: (val: string) => new Date(val).toLocaleString() },
+    { key: 'product_name', label: 'Producto' },
+    { key: 'type', label: 'Tipo' },
+    { key: 'quantity_change', label: 'Cantidad', format: (val: number) => val > 0 ? `+${val}` : `${val}` },
+    { key: 'reason', label: 'Razón' },
+    { key: 'user_name', label: 'Usuario' },
   ];
 
   const gananciasHeaders = [
     { key: 'dateLabel', label: 'Fecha' },
-    { key: 'ventas', label: 'Venta Total', format: (val: any) => `S/ ${val.toFixed(2)}` },
-    { key: 'costo', label: 'Costo Mercadería', format: (val: any) => `S/ ${val.toFixed(2)}` },
-    { key: 'ganancia', label: 'Ganancia Neta', format: (val: any) => `S/ ${val.toFixed(2)}` },
-    { key: 'margen', label: 'Margen %', format: (val: any) => `${val}%` },
+    { key: 'ventas', label: 'Venta Total', format: (val: number) => `S/ ${val.toFixed(2)}` },
+    { key: 'costo', label: 'Costo Mercadería', format: (val: number) => `S/ ${val.toFixed(2)}` },
+    { key: 'ganancia', label: 'Ganancia Neta', format: (val: number) => `S/ ${val.toFixed(2)}` },
+    { key: 'margen', label: 'Margen %', format: (val: number) => `${val}%` },
   ];
 
   const bestSellersHeaders = [
     { key: 'rank', label: '#' },
     { key: 'productName', label: 'Producto' },
     { key: 'quantity', label: 'Und. Vendidas' },
-    { key: 'revenue', label: 'Ingresos Totales', format: (val: any) => `S/ ${val.toFixed(2)}` },
-    { key: 'avgPrice', label: 'Precio Prom.', format: (val: any) => `S/ ${val.toFixed(2)}` },
+    { key: 'revenue', label: 'Ingresos Totales', format: (val: number) => `S/ ${val.toFixed(2)}` },
+    { key: 'avgPrice', label: 'Precio Prom.', format: (val: number) => `S/ ${val.toFixed(2)}` },
   ];
 
   const sugerenciasHeaders = [
@@ -163,6 +172,7 @@ const Reports: React.FC = () => {
     const dailyData: Record<string, { dateLabel: string, ventas: number, costo: number, ganancia: number }> = {};
 
     ventas.filter(filterByDate).forEach(sale => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const d = new Date(sale.createdAt as any);
       if (isNaN(d.getTime())) return;
       const key = d.toLocaleDateString();
@@ -233,6 +243,7 @@ const Reports: React.FC = () => {
 
   // --- EXPORT ---
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function toCSV(rows: any[], headers: any[]) {
     const list = [
       headers.map(h => h.label).join(';'),
@@ -246,7 +257,9 @@ const Reports: React.FC = () => {
   }
 
   const handleExport = (format: 'csv' | 'pdf') => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let headers: any[] = [];
     let title = '';
 
@@ -256,7 +269,7 @@ const Reports: React.FC = () => {
       title = 'Reporte de Ventas';
     } else if (reportType === 'inventario') {
       data = productos;
-      headers = inventarioHeaders;
+      headers = productosHeaders;
       title = 'Reporte de Inventario';
     } else if (reportType === 'gastos') {
       data = gastos.filter(filterByDate);
@@ -264,7 +277,7 @@ const Reports: React.FC = () => {
       title = 'Reporte de Gastos';
     } else if (reportType === 'cierre_caja') {
       data = cierres;
-      headers = cierresHeaders;
+      headers = cierreHeaders;
       title = 'Reporte de Cierres de Caja';
     } else if (reportType === 'movimientos') {
       data = movimientos.filter(filterByDate);
@@ -284,7 +297,7 @@ const Reports: React.FC = () => {
       title = 'Sugerencia de Compra (Stock Bajo)';
     }
 
-    if (data.length === 0 && format !== 'dashboard') {
+    if (data.length === 0) {
       alert("No hay datos para exportar.");
       return;
     }
@@ -313,12 +326,13 @@ const Reports: React.FC = () => {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const filterByDate = (item: any) => {
     if (!fechaInicio && !fechaFin) return true;
     const dateVal = item.createdAt || item.date || item.opened_at || (item.dateLabel ? new Date(item.dateLabel) : null);
     if (!dateVal) return false;
 
-    let d = new Date(dateVal.seconds ? dateVal.seconds * 1000 : dateVal);
+    const d = new Date(dateVal.seconds ? dateVal.seconds * 1000 : dateVal);
     if (isNaN(d.getTime())) return false;
 
     if (fechaInicio) {
@@ -333,6 +347,7 @@ const Reports: React.FC = () => {
   };
 
   // Pagination Helper
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getPaginatedData = (data: any[]) => {
     // Logic split for pre-processed data like Profits vs raw data like Sales
     let filtered = data;
@@ -380,13 +395,15 @@ const Reports: React.FC = () => {
     }
 
     // Generic Table setup
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let headers: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dataSrc: any[] = [];
 
     if (reportType === 'ventas') { headers = ventasHeaders; dataSrc = ventas; }
-    else if (reportType === 'inventario') { headers = inventarioHeaders; dataSrc = productos; }
+    else if (reportType === 'inventario') { headers = productosHeaders; dataSrc = productos; }
     else if (reportType === 'gastos') { headers = gastosHeaders; dataSrc = gastos; }
-    else if (reportType === 'cierre_caja') { headers = cierresHeaders; dataSrc = cierres; }
+    else if (reportType === 'cierre_caja') { headers = cierreHeaders; dataSrc = cierres; }
     else if (reportType === 'movimientos') { headers = movimientosHeaders; dataSrc = movimientos; }
     else if (reportType === 'mas_vendidos') { headers = bestSellersHeaders; dataSrc = getBestSellers(); }
     else if (reportType === 'sugerencias') { headers = sugerenciasHeaders; dataSrc = getReorderSuggestions(); }
@@ -512,11 +529,12 @@ const Reports: React.FC = () => {
                     cashierName: ventaSeleccionada.cashierName || '-',
                     customerName: ventaSeleccionada.customerName || '',
                     paymentMethod: ventaSeleccionada.paymentMethod === 'cash' ? 'Efectivo' : ventaSeleccionada.paymentMethod,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     date: new Date(ventaSeleccionada.createdAt as any).toLocaleDateString(),
                     items: ventaSeleccionada.items?.map(i => ({ productName: i.productName!, quantity: i.quantity!, unitPrice: i.unitPrice! })) || [],
                     subtotal: ventaSeleccionada.subtotal || 0,
                     discount: ventaSeleccionada.discount || 0,
-                    igv: ventaSeleccionada.igv || 0,
+                    igv: (ventaSeleccionada.igv as unknown as number) || 0,
                     total: ventaSeleccionada.total || 0
                   }} settings={storeSettings} />
                 </div>

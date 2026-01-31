@@ -21,7 +21,7 @@ const LowStockManager: React.FC = () => {
   const { tenant } = useTenant();
   const { refreshLowStock } = useLowStock();
 
-  const fetchProductos = async () => {
+  const fetchProductos = React.useCallback(async () => {
     if (!tenant?.id) return;
     setLoading(true);
     setError(null);
@@ -36,11 +36,11 @@ const LowStockManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenant?.id, refreshLowStock]);
 
   useEffect(() => {
     fetchProductos();
-  }, []);
+  }, [fetchProductos]);
 
   const productosBajoStock = productos.filter(
     p => typeof p.stock === 'number' && typeof p.minStock === 'number' && p.stock <= p.minStock

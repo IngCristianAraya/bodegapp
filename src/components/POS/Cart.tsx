@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, ChevronRight } from 'lucide-react';
 import type { CartItem } from '../../types/index';

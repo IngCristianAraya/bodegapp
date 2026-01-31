@@ -29,7 +29,7 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
       }
     };
     fetchMovements();
-  }, [product.id]);
+  }, [product.id, companyId]);
 
   // Exportar historial a Excel
   const handleExportExcel = () => {
@@ -144,7 +144,8 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
                 {movements.map((mov) => {
                   // Determine colors based on type
                   const isIngreso = mov.type === 'ingreso' || (mov.type === 'ajuste' && mov.quantity > 0);
-                  const isEgreso = mov.type === 'egreso' || (mov.type === 'ajuste' && mov.quantity < 0);
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  const _isEgreso = mov.type === 'egreso' || (mov.type === 'ajuste' && mov.quantity < 0);
 
                   return (
                     <tr key={mov.id} className="bg-gray-50/50 dark:bg-slate-800/40 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">

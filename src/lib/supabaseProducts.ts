@@ -63,7 +63,7 @@ export async function obtenerProductos(tenantId: string, includeArchived: boolea
         throw error;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     return data.map((item: any) => ({
         id: item.id,
         name: item.name || '',

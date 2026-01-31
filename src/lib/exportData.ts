@@ -165,6 +165,7 @@ export async function exportAllDataToCSV(tenantId: string): Promise<Blob> {
   zip.file('ventas_resumen.csv', arrayToCSV(ventasResumenCSV.map(i => toCSVObject(i))));
 
   // 6. Ventas Detalle
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ventasDetalleCSV: any[] = [];
   ventas.forEach((venta: Sale) => {
     if (venta.items && Array.isArray(venta.items)) {

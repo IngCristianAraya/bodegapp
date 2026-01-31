@@ -231,6 +231,7 @@ const POS: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
   const handleAddToCart = (product: Product, peso?: number) => {

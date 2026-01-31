@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
 import { supabase } from '../../lib/supabase';
-import { AlertTriangle, Calendar, CheckCircle, Package, Search, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Calendar, Search, ArrowLeft, CheckCircle } from 'lucide-react';
 
 interface ExpiringProduct {
     id: string;
@@ -96,7 +96,8 @@ export default function ExpirationPage({ onBack }: { onBack?: () => void }) {
                 <div
                     onClick={() => setFilter('expired')}
                     className={`p-5 rounded-2xl border transition-all cursor-pointer hover:scale-105 active:scale-95 ${filter === 'expired' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20 border-red-200' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
-                        }`}>
+                        }`}
+                >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-xl">
                             <AlertTriangle size={24} />
@@ -111,7 +112,8 @@ export default function ExpirationPage({ onBack }: { onBack?: () => void }) {
                 <div
                     onClick={() => setFilter('warning')}
                     className={`p-5 rounded-2xl border transition-all cursor-pointer hover:scale-105 active:scale-95 ${filter === 'warning' ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-900/20 border-amber-200' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
-                        }`}>
+                        }`}
+                >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-xl">
                             <AlertTriangle size={24} />
@@ -126,7 +128,8 @@ export default function ExpirationPage({ onBack }: { onBack?: () => void }) {
                 <div
                     onClick={() => setFilter('healthy')}
                     className={`p-5 rounded-2xl border transition-all cursor-pointer hover:scale-105 active:scale-95 ${filter === 'healthy' ? 'ring-2 ring-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-gray-700'
-                        }`}>
+                        }`}
+                >
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-xl">
                             <CheckCircle size={24} />
@@ -155,8 +158,8 @@ export default function ExpirationPage({ onBack }: { onBack?: () => void }) {
                     <button
                         onClick={() => setFilter('all')}
                         className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${filter === 'all'
-                                ? 'bg-gray-900 text-white dark:bg-white dark:text-slate-900'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-gray-400'
+                            ? 'bg-gray-900 text-white dark:bg-white dark:text-slate-900'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-gray-400'
                             }`}
                     >
                         Todos
@@ -207,8 +210,8 @@ export default function ExpirationPage({ onBack }: { onBack?: () => void }) {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <div className={`inline-flex flex-col items-center justify-center px-3 py-1 rounded-lg text-xs font-bold w-full max-w-[100px] ${status.color === 'red' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        status.color === 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                    status.color === 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                                                     }`}>
                                                     <span>{status.label}</span>
                                                     <span className="text-[10px] opacity-75">{status.days} días</span>

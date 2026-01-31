@@ -1,9 +1,8 @@
 
 import React, { FC, useCallback, useEffect, useState, useMemo } from 'react';
 import type { Product } from '../../types/inventory';
-import type { Sale } from '../../types/index';
+import type { Sale, Expense } from '../../types/index';
 import {
-  ShoppingCart,
   AlertTriangle,
   DollarSign,
   TrendingUp,
@@ -42,7 +41,7 @@ const Dashboard: FC = () => {
   const toast = useToast();
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number; imageUrl?: string }[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
   const [hasShownAlert, setHasShownAlert] = useState(false);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Search, X, Check } from 'lucide-react';
+import { Search, UserPlus, X } from 'lucide-react';
 import { Customer } from '../../types/index';
 import { obtenerClientes } from '@/lib/supabaseCustomers';
 import { useTenant } from '@/contexts/TenantContext';
@@ -52,7 +52,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({ onSelect, selectedC
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <div className={`p-1.5 rounded-full ${selectedCustomer ? 'bg-emerald-200' : 'bg-gray-100'}`}>
-                    <User size={18} />
+                    <UserPlus size={18} />
                 </div>
                 <span className="flex-1 font-medium truncate">
                     {selectedCustomer ? selectedCustomer.name : 'Seleccionar Cliente (Opcional)'}

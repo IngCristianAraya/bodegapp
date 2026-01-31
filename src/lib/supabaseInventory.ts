@@ -151,7 +151,7 @@ export async function obtenerTodosMovimientosInventario(tenantId: string): Promi
         return [];
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     return data.map((m: any) => ({
         id: m.id,
         productId: m.product_id,
@@ -182,7 +182,7 @@ export async function obtenerMovimientosProducto(productId: string, tenantId: st
         return [];
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     return data.map((m: any) => ({
         id: m.id,
         productId: m.product_id,

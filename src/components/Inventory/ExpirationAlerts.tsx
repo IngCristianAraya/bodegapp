@@ -10,6 +10,7 @@ interface ExpiringProduct {
     stock: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ExpirationAlerts({ refreshTrigger }: { refreshTrigger?: any }) {
     const { tenant } = useTenant();
     const [expiring, setExpiring] = useState<ExpiringProduct[]>([]);

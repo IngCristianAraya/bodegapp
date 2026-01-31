@@ -35,7 +35,7 @@ export default function ExpenseManager() {
         category: 'Insumos',
     });
 
-    const fetchExpenses = async () => {
+    const fetchExpenses = React.useCallback(async () => {
         if (!tenant?.id) return;
         setLoading(true);
         try {
@@ -46,7 +46,7 @@ export default function ExpenseManager() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [tenant?.id]);
 
     // Check Cash Register Status when modal opens or tenant changes
     useEffect(() => {
@@ -68,7 +68,7 @@ export default function ExpenseManager() {
 
     useEffect(() => {
         fetchExpenses();
-    }, [tenant]);
+    }, [fetchExpenses]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

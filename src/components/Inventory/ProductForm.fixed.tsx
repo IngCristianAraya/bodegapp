@@ -71,6 +71,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         setForm({ ...form, isExemptIGV: isExempt, isExonerated: isExempt });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.category]);
 
   // Manejar cambio en el tipo de producto (unidad/kg)

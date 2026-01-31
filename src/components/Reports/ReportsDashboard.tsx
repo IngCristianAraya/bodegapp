@@ -1,8 +1,8 @@
 import React from 'react';
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell
+    XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
-import { Sale, Product, SaleItem, Expense } from '../../types/index';
+import { Sale, Product, Expense } from '../../types/index';
 import { ArrowUpRight, ArrowDownRight, DollarSign, TrendingUp, Package } from 'lucide-react';
 
 interface ReportsDashboardProps {
@@ -50,10 +50,14 @@ const ReportsDashboard: React.FC<ReportsDashboardProps> = ({ ventas, productos, 
     // A. Sales vs Profit (Last 7 days or all time grouped by day)
     const getDailyData = () => {
         const data: Record<string, { name: string, ventas: number, ganancia: number }> = {};
-        const sortedSales = [...ventas].sort((a, b) => new Date(a.createdAt as any).getTime() - new Date(b.createdAt as any).getTime());
+        const sortedSales = [...ventas].sort((a, b) => {
+            const dateA = new Date(a.createdAt instanceof Object && 'seconds' in a.createdAt ? (a.createdAt as { seconds: number }).seconds * 1000 : a.createdAt);
+            const dateB = new Date(b.createdAt instanceof Object && 'seconds' in b.createdAt ? (b.createdAt as { seconds: number }).seconds * 1000 : b.createdAt);
+            return dateA.getTime() - dateB.getTime();
+        });
 
         sortedSales.forEach(v => {
-            const d = new Date(v.createdAt as any);
+            const d = new Date(v.createdAt instanceof Object && 'seconds' in v.createdAt ? (v.createdAt as { seconds: number }).seconds * 1000 : v.createdAt);
             // Group by Day/Month
             const key = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
             if (!data[key]) data[key] = { name: key, ventas: 0, ganancia: 0 };

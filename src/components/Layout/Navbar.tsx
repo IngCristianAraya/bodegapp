@@ -25,11 +25,12 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) => {
   // Use try-catch to handle case where context might not be available
   let criticalStockCount = 0;
-  const { isPro } = useSubscription();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { isPro: _isPro } = useSubscription();
   try {
     const lowStockContext = useLowStock();
     criticalStockCount = lowStockContext.criticalStockCount;
-  } catch { // Removed 'error' variable as it was unused
+  } catch {
     // Context not available yet, use default value
     console.warn('LowStockContext not available in Navbar');
   }
@@ -44,6 +45,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
       const { supabase } = await import('../../lib/supabase');
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { data, error } = await supabase
           .from('system_announcements')
           .select('*')

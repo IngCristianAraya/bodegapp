@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Shield, Lock, Search, RefreshCw, CheckCircle, XCircle, Power, Banknote, Bell } from 'lucide-react';
+import { Shield, Lock, RefreshCw, CheckCircle, XCircle, Power, Banknote, Bell } from 'lucide-react';
 
 interface TenantRow {
     id: string;
@@ -10,6 +10,7 @@ interface TenantRow {
     subdomain: string;
     status: 'active' | 'suspended' | 'cancelled';
     created_at: string;
+    subscription_end_date?: string;
 }
 
 export default function SuperAdminTenants() {
@@ -43,8 +44,8 @@ export default function SuperAdminTenants() {
             // 2. Fetch Analytics (Parallel)
             const { data: analyticsData, error: analyticsError } = await supabase.rpc('admin_get_analytics', { p_admin_secret: secret });
             if (!analyticsError && analyticsData) {
-                const map: any = {};
-                analyticsData.forEach((row: any) => {
+                const map: Record<string, { products: number, sales: number, total: number }> = {};
+                analyticsData.forEach((row: { tenant_id: string, product_count: number, monthly_sales_count: number, monthly_sales_total: number }) => {
                     map[row.tenant_id] = {
                         products: row.product_count,
                         sales: row.monthly_sales_count,
@@ -55,9 +56,10 @@ export default function SuperAdminTenants() {
             }
 
             setIsAuthenticated(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || 'Clave inválida o error de conexión');
+            const message = err instanceof Error ? err.message : 'Clave inválida o error de conexión';
+            setError(message);
             setIsAuthenticated(false);
         } finally {
             setLoading(false);
@@ -84,10 +86,11 @@ export default function SuperAdminTenants() {
             if (error) throw error;
 
             // Update local state
-            setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus as any } : t));
+            setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, status: newStatus as 'active' | 'suspended' | 'cancelled' } : t));
 
-        } catch (err: any) {
-            alert('Error actualizando estado: ' + err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            alert('Error actualizando estado: ' + message);
         }
     };
 
@@ -127,8 +130,9 @@ export default function SuperAdminTenants() {
             // Refresh list
             verifyKey(key);
             setShowPaymentModal(false);
-        } catch (err: any) {
-            alert('Error registrando pago: ' + err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            alert('Error registrando pago: ' + message);
         } finally {
             setProcessingPayment(false);
         }
@@ -154,17 +158,15 @@ export default function SuperAdminTenants() {
             alert('Mensaje enviado a todas las bodegas exitosamente.');
             setShowBroadcastModal(false);
             setBroadcastMessage({ title: '', message: '', type: 'info' });
-        } catch (err: any) {
-            alert('Error enviando mensaje: ' + err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            alert('Error enviando mensaje: ' + message);
         } finally {
             setSendingBroadcast(false);
         }
     };
 
     if (!isAuthenticated) {
-        // ... (Login Form remains same, skipping for brevity in replacement if possible, but replace_file_content needs context)
-        // I will target the rendering part only for efficiency or need to include the full component if structure changes significantly.
-        // Re-using existing Login Form Return...
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans">
                 {/* ... existing login UI ... */}
@@ -278,11 +280,8 @@ export default function SuperAdminTenants() {
                                             </td>
                                             <td className="p-6">
                                                 <div className="text-sm text-slate-400">Alta: {new Date(tenant.created_at).toLocaleDateString()}</div>
-                                                {/* Assuming admin_get_tenants returns subscription_end_date, otherwise this field might be missing. I will Add it to the interface later if needed */}
-                                                {/* @ts-ignore */}
                                                 {tenant.subscription_end_date && (
                                                     <div className="text-sm font-bold text-emerald-400 mt-1">
-                                                        {/* @ts-ignore */}
                                                         Vence: {new Date(tenant.subscription_end_date).toLocaleDateString()}
                                                     </div>
                                                 )}

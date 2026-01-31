@@ -20,7 +20,7 @@ export const LowStockProvider: React.FC<{ children: ReactNode }> = ({ children }
     const [lowStockCount, setLowStockCount] = useState(0);
     const [criticalStockCount, setCriticalStockCount] = useState(0);
 
-    const refreshLowStock = async () => {
+    const refreshLowStock = React.useCallback(async () => {
         if (!tenant?.id) return;
 
         try {
@@ -44,7 +44,7 @@ export const LowStockProvider: React.FC<{ children: ReactNode }> = ({ children }
         } catch (error) {
             console.error('Error fetching low stock:', error);
         }
-    };
+    }, [tenant?.id]);
 
     useEffect(() => {
         refreshLowStock();
@@ -53,7 +53,7 @@ export const LowStockProvider: React.FC<{ children: ReactNode }> = ({ children }
         const interval = setInterval(refreshLowStock, 5 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [tenant?.id]);
+    }, [tenant?.id, refreshLowStock]);
 
     return (
         <LowStockContext.Provider value={{

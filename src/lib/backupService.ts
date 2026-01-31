@@ -4,14 +4,22 @@ import { supabase } from './supabase';
 export interface BackupData {
     timestamp: string;
     tenant_id: string;
-    products: any[];
-    sales: any[];
-    sale_items: any[];
-    customers: any[];
-    suppliers: any[];
-    expenses: any[];
-    cash_registers: any[];
-    cash_movements: any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    products: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sales: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sale_items: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    customers: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    suppliers: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expenses: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cash_registers: Record<string, any>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cash_movements: Record<string, any>[];
 }
 
 export async function generateFullBackup(tenantId: string): Promise<BackupData> {

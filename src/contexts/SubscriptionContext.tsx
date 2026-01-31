@@ -54,7 +54,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const isPro = plan === 'PRO';
     const daysRemaining = null; // To implement based on trial_ends_at or period_end
 
-    const refreshSubscription = async () => {
+    const refreshSubscription = React.useCallback(async () => {
         if (!tenant?.id) {
             setLoading(false);
             return;
@@ -76,11 +76,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         } finally {
             setLoading(false);
         }
-    };
+    }, [tenant?.id]);
 
     useEffect(() => {
         refreshSubscription();
-    }, [tenant?.id]);
+    }, [tenant?.id, refreshSubscription]);
 
     const checkFeatureAccess = (feature: FeatureKey): boolean => {
         // Si el plan es PRO, generalmente todo está permitido, salvo que haya features enterprise futuras
