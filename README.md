@@ -1,74 +1,191 @@
-# BodegApp SaaS - Sistema de Gestión Premium para Bodegas 🚀
+# BodegApp SaaS - Sistema de Gestión Premium para Bodegas 🏪
 
-**BodegApp** es una plataforma **SaaS Multi-tenant** de última generación diseñada para digitalizar y escalar negocios de abarrotes y bodegas. Construida con una arquitectura de aislamiento de datos rigurosa, permite gestionar múltiples tiendas independientes bajo una misma infraestructura en la nube.
+**BodegApp** es una plataforma **SaaS Multi-tenant** diseñada para digitalizar y escalar negocios de abarrotes y bodegas. Construida con una arquitectura de aislamiento de datos rigurosa, permite gestionar múltiples tiendas independientes bajo una misma infraestructura en la nube.
 
 ---
 
 ## 🏗️ Arquitectura SaaS Multi-tenant
-A diferencia de sistemas tradicionales, BodegApp utiliza un modelo de **Base de Datos Compartida con Aislamiento Lógico**:
-- **Aislamiento por Tenant:** Cada registro está vinculado a un `tenant_id` único.
-- **Seguridad RLS (Row Level Security):** Implementado a nivel de base de datos en Supabase para garantizar que ninguna bodega acceda a datos ajenos.
-- **Routing por Subdominio:** Resolución dinámica de inquilinos mediante subdominios (ej: `demo.localhost:3000` o `bodega01.tuapp.com`).
+
+| Característica | Implementación |
+|----------------|----------------|
+| **Aislamiento de datos** | Cada registro está vinculado a un `tenant_id` único |
+| **Seguridad RLS** | Row Level Security a nivel de Supabase |
+| **Routing dinámico** | Subdominios (ej: `mibodega.tubarrio.pe`) |
+| **Planes SaaS** | FREE (100 productos) / PRO (ilimitado) |
 
 ---
 
-## 🌟 Características Principales
+## 🌟 Módulos Principales
 
-- **Dashboard Inteligente:** Métricas en tiempo real con Bento Grid UI, gráficos interactivos y KPIs de rendimiento.
-- **Punto de Venta (POS) Pro:** Interfaz optimizada para velocidad, soporte para lectores de barras, gestión de descuentos y múltiples métodos de pago.
-- **Gestión de Inventario (Kardex):** Control exhaustivo de stock, costos promedio, alertas de stock mínimo e historial de movimientos.
-- **Gestión de Entidades:** Módulos completos para Clientes y Proveedores con historial transaccional.
-- **Reportes Avanzados:** Generación de informes financieros y de inventario exportables a Excel (XLSX) y PDF.
-- **Diseño Premium:** Interfaz moderna con Glassmorphism, animaciones fluidas y modo oscuro integrado.
+### 📊 Dashboard Analytics
+- Ventas en tiempo real (día/semana/mes)
+- Gráficos interactivos con Recharts
+- Matriz de rentabilidad por producto
+- Predicción de agotamiento de stock
+- Comparativas temporales
+- Alertas de rotación de inventario
+
+### 🛒 Punto de Venta (POS)
+- Búsqueda rápida de productos
+- Lector de código de barras integrado
+- Carrito con cálculo automático de IGV
+- Productos a granel (peso variable)
+- Múltiples métodos de pago (Efectivo, Yape, Plin, Tarjeta)
+- Impresión de tickets térmicos
+- Selector de clientes para fiado/crédito
+
+### 📦 Inventario (Kardex)
+- CRUD completo de productos
+- Control de stock con costo promedio
+- Alertas de stock mínimo
+- Control de fechas de vencimiento
+- Historial de movimientos
+- Ingresos de mercadería con proveedor
+- Modificación rápida de precios
+- PIN de administrador para acciones críticas
+
+### 💰 Caja Registradora
+- Apertura/cierre de caja con monto inicial
+- Movimientos de efectivo (entradas/salidas)
+- Historial completo de cajas
+- Balance automático
+
+### 👥 Gestión de Clientes
+- Registro de clientes
+- Historial de compras
+- Control de deudas (fiado)
+
+### 🚚 Proveedores
+- Catálogo de proveedores
+- Vinculación con productos e ingresos
+
+### 💸 Control de Gastos
+- Registro de gastos operativos
+- Categorización de egresos
+- Integración con reportes
+
+### 📈 Reportes
+- Dashboard de métricas
+- Exportación a PDF y Excel
+- Filtros por rango de fechas
+
+### ⚙️ Configuración
+- Datos de la tienda
+- Logo personalizado
+- QR de pago (Yape/Plin)
+- PIN de administrador
+- Respaldos de datos
+
+---
+
+## 🔐 Panel Super Admin
+
+Panel exclusivo para administración de la plataforma SaaS:
+
+- Gestión de todos los tenants
+- Activar/suspender tiendas
+- Registro de pagos de suscripción
+- Broadcast de mensajes del sistema
+- Analytics por tenant (ventas, productos)
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-- **Frontend:** Next.js 15 (App Router), React 19, TypeScript.
-- **Estilos:** TailwindCSS (Diseño Responsivo y Moderno).
-- **Backend & DB:** Supabase (PostgreSQL) con políticas RLS activas.
-- **Autenticación:** Supabase Auth (Manejo de sesiones y roles de usuario).
-- **Iconografía:** Lucide React & React Icons.
-- **Gráficos:** Recharts.
-- **Exportación:** JSPDF & XLSX.
+| Categoría | Tecnología |
+|-----------|------------|
+| **Framework** | Next.js 15 (App Router) |
+| **Frontend** | React 19, TypeScript |
+| **Estilos** | TailwindCSS 4 |
+| **Base de datos** | Supabase (PostgreSQL + RLS) |
+| **Autenticación** | Supabase Auth |
+| **Gráficos** | Recharts |
+| **Exportación** | jsPDF, xlsx |
+| **Iconos** | Lucide React |
+| **PWA** | next-pwa |
 
 ---
 
-## ⚡ Instalación y Configuración
+## ⚡ Instalación
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone [URL-DEL-REPOSITORIO]
-   ```
-2. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
-3. **Variables de Entorno:**
-   Configura tu `.env.local` con las credenciales de Supabase:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
-   ```
-4. **Base de Datos:**
-   Ejecuta el script `supabase_setup.sql` en el SQL Editor de tu proyecto de Supabase para inicializar la estructura multi-tenant.
-5. **Ejecutar en desarrollo:**
-   ```bash
-   npm run dev
-   ```
+### 1. Clonar el repositorio
+```bash
+git clone <url-repositorio>
+cd bodegapp-next
+```
+
+### 2. Instalar dependencias
+```bash
+npm install
+```
+
+### 3. Configurar variables de entorno
+Crear archivo `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=<tu-url-supabase>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
+SUPER_ADMIN_KEY=<clave-super-admin>
+```
+
+### 4. Configurar base de datos
+Ejecutar `supabase_setup.sql` en el SQL Editor de Supabase.
+
+### 5. Ejecutar en desarrollo
+```bash
+npm run dev
+```
+
+### 6. Build de producción
+```bash
+npm run build
+npm run start
+```
 
 ---
 
-## 👤 Desarrollo y Créditos
+## 📁 Estructura del Proyecto
 
-Este sistema ha sido diseñado y desarrollado con altos estándares de ingeniería para ofrecer una solución robusta y escalable al sector minorista.
+```
+src/
+├── app/                # Next.js App Router
+│   ├── admin/          # Panel Super Admin
+│   ├── clientes/       # Gestión de clientes
+│   ├── proveedores/    # Gestión de proveedores
+│   └── register/       # Registro de tiendas
+├── components/         # Componentes React
+│   ├── Auth/           # Autenticación
+│   ├── CashRegister/   # Caja registradora
+│   ├── Dashboard/      # Analytics
+│   ├── Inventory/      # Inventario
+│   ├── POS/            # Punto de venta
+│   ├── Reports/        # Reportes
+│   └── Settings/       # Configuración
+├── contexts/           # React Contexts
+├── hooks/              # Custom hooks
+├── lib/                # Servicios Supabase
+├── types/              # TypeScript types
+└── utils/              # Utilidades
+```
 
-**Desarrollado por:**
-### **Ingeniero Cristian Araya** 
+---
+
+## 📜 Scripts Disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm run start` | Ejecutar build |
+| `npm run lint` | Verificar código |
+
+---
+
+## 👤 Desarrollo
+
+**Desarrollado por:**  
+### **Ingeniero Cristian Araya**  
 *Especialista en Soluciones SaaS y Arquitecturas Cloud*
 
 ---
 
-> [!NOTE]
-> Este proyecto se encuentra en constante evolución. Para soporte técnico o implementaciones personalizadas, contactar con el equipo de desarrollo.
+> **Nota:** Para soporte técnico o implementaciones personalizadas, contactar con el equipo de desarrollo.
