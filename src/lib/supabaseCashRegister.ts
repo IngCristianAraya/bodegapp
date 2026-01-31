@@ -71,7 +71,13 @@ export async function cerrarCaja(
     tenantId: string,
     closingAmount: number,
     expectedAmount: number,
-    notes?: string
+    notes?: string,
+    totals?: {
+        salesCash: number;
+        salesDigital: number;
+        ingresos: number;
+        egresos: number;
+    }
 ): Promise<void> {
     const { error } = await supabase
         .from('cash_registers')
@@ -80,7 +86,12 @@ export async function cerrarCaja(
             closing_amount: closingAmount,
             expected_amount: expectedAmount,
             closed_at: new Date().toISOString(),
-            notes: notes
+            notes: notes,
+            // Guardar históricos si existen
+            total_sales_cash: totals?.salesCash || 0,
+            total_sales_digital: totals?.salesDigital || 0,
+            total_ingresos: totals?.ingresos || 0,
+            total_egresos: totals?.egresos || 0
         })
         .eq('id', registerId)
         .eq('tenant_id', tenantId);
@@ -170,4 +181,84 @@ export async function obtenerResumenCaja(registerId: string, tenantId: string): 
         total_egresos: totalEgresos,
         expected_amount: expectedAmount
     };
+}
+
+export async function obtenerHistorialCajas(tenantId: string): Promise<CashRegister[]> {
+    const { data, error } = await supabase
+        .from('cash_registers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'closed')
+        .order('closed_at', { ascending: false });
+
+    if (error) {
+        console.error('Error obteniendo historial de cajas:', error);
+        return [];
+    }
+
+    return data;
+}
+
+// Helper para recalcular totales históricos (útil si hubo errores de sincronización)
+export async function recalculateRegisterTotals(registerId: string, tenantId: string): Promise<boolean> {
+    // 1. Obtener la caja cerrada
+    const { data: register, error: regError } = await supabase
+        .from('cash_registers')
+        .select('*')
+        .eq('id', registerId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+    if (regError || !register || !register.closed_at) {
+        console.error('Error fetching register for recalc:', regError);
+        return false;
+    }
+
+    // 2. Obtener ventas en ese rango
+    const { data: sales, error: salesError } = await supabase
+        .from('sales')
+        .select('total, payment_method')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', register.opened_at)
+        .lte('created_at', register.closed_at);
+
+    if (salesError) {
+        console.error('Error fetching sales for recalc:', salesError);
+        return false;
+    }
+
+    // 3. Recalcular
+    interface SaleCalc { total: number; payment_method: string; }
+
+    let calcCash = 0;
+    let calcDigital = 0;
+
+    (sales as SaleCalc[] || []).forEach(s => {
+        const amount = Number(s.total) || 0;
+        if (s.payment_method === 'cash') {
+            calcCash += amount;
+        } else {
+            calcDigital += amount;
+        }
+    });
+
+    // 4. Actualizar registro
+    // Nota: Recalculamos el esperado también, asumiendo ingresos/egresos ya están correctos en DB
+    const expected = Number(register.opening_amount) + calcCash + (Number(register.total_ingresos) || 0) - (Number(register.total_egresos) || 0);
+
+    const { error: updateError } = await supabase
+        .from('cash_registers')
+        .update({
+            total_sales_cash: calcCash,
+            total_sales_digital: calcDigital,
+            expected_amount: expected
+        })
+        .eq('id', registerId);
+
+    if (updateError) {
+        console.error('Error updating register:', updateError);
+        return false;
+    }
+
+    return true;
 }

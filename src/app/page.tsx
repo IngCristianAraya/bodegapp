@@ -10,6 +10,9 @@ import Reports from "../components/Reports/Reports";
 import LowStockManager from "../components/LowStock/LowStockManager";
 import Settings from "../components/Settings/Settings";
 import SupplierManager from '../components/Suppliers/SupplierManager';
+import CustomerManager from '../components/Customers/CustomerManager';
+import ExpenseManager from '../components/Expenses/ExpenseManager';
+import ExpirationPage from '../components/Inventory/ExpirationPage';
 import LandingNavbar from "../components/Landing/LandingNavbar";
 import Hero from "../components/Landing/Hero";
 import Features from "../components/Landing/Features";
@@ -64,8 +67,14 @@ export default function Home() {
         return <Dashboard />;
       case "pos":
         return <POS />;
+      case "customers":
+        return <CustomerManager />;
+      case "expenses":
+        return <ExpenseManager />;
       case "inventory":
         return <Inventory />;
+      case "expirations":
+        return <ExpirationPage onBack={() => setCurrentPage("inventory")} />;
       case "reports":
         return <Reports />;
       case "lowstock":

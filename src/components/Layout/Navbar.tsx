@@ -1,12 +1,15 @@
 import React from 'react';
-import { Home, ShoppingCart, Package, Truck, BarChart3, Settings, LogOut, CircleAlert } from 'lucide-react';
+import { Home, ShoppingCart, Package, Truck, BarChart3, Settings, LogOut, CircleAlert, Users, Wallet, Calendar, Bell } from 'lucide-react';
 import { useLowStock } from '../../contexts/LowStockContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'pos', label: 'Punto de Venta', icon: ShoppingCart },
+  { id: 'customers', label: 'Clientes', icon: Users },
+  { id: 'expenses', label: 'Gastos', icon: Wallet },
   { id: 'inventory', label: 'Inventario', icon: Package },
+  { id: 'expirations', label: 'Vencimientos', icon: Calendar },
   { id: 'lowstock', label: 'Bajo Stock', icon: CircleAlert },
   { id: 'suppliers', label: 'Proveedores', icon: Truck },
   { id: 'reports', label: 'Reportes', icon: BarChart3 },
@@ -30,6 +33,44 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
     // Context not available yet, use default value
     console.warn('LowStockContext not available in Navbar');
   }
+  // Broadcast Logic
+  const [activeAnnouncement, setActiveAnnouncement] = React.useState<{ title: string, message: string, type: string } | null>(null);
+  const [showAnnouncement, setShowAnnouncement] = React.useState(false);
+
+  React.useEffect(() => {
+    // Check for announcements
+    const checkAnnouncements = async () => {
+      // Dynamic import to avoid SSR issues if any, or just standard import usage
+      const { supabase } = await import('../../lib/supabase');
+
+      try {
+        const { data, error } = await supabase
+          .from('system_announcements')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (data) {
+          // Simple logic: Show if we haven't seen this ID in session or specific logic
+          // For now, just show it once per refresh or if it's new.
+          // To be less annoying, we could check localStorage.
+          const lastSeen = localStorage.getItem('last_seen_announcement');
+          if (lastSeen !== data.id) {
+            setActiveAnnouncement(data);
+            setShowAnnouncement(true);
+            localStorage.setItem('last_seen_announcement', data.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching announcements', err);
+      }
+    };
+
+    checkAnnouncements();
+  }, []);
+
   return (
     <nav className="fixed top-4 left-4 right-4 z-50 rounded-2xl glass shadow-lg border border-white/20 dark:border-white/10 dark:bg-slate-900/80">
       <div className="w-full px-6 flex items-center justify-between h-18">
@@ -74,15 +115,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
           </ul>
         </div>
 
-        {/* Plan Badge */}
-        <div className="hidden md:flex items-center mr-4">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${isPro
-            ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700'
-            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-gray-700'
-            }`}>
-            {isPro ? 'PLAN PRO' : 'PLAN GRATUITO'}
-          </span>
-        </div>
+        {/* Plan Badge Removed */}
 
         {/* Botón Cerrar Sesión */}
         <button
@@ -93,7 +126,50 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange, onLogout }) 
           <span className="font-medium text-sm hidden sm:inline-block">Salir</span>
         </button>
       </div>
-    </nav>
+
+      {/* Broadcast Modal/Popup */}
+      {
+        showAnnouncement && activeAnnouncement && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className={`
+              bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border-2
+              ${activeAnnouncement.type === 'warning' ? 'border-amber-500' :
+                activeAnnouncement.type === 'success' ? 'border-emerald-500' : 'border-indigo-500'}
+           `}>
+              <div className={`p-6 ${activeAnnouncement.type === 'warning' ? 'bg-amber-500/10' :
+                activeAnnouncement.type === 'success' ? 'bg-emerald-500/10' : 'bg-indigo-500/10'
+                }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`
+                          p-3 rounded-2xl flex-shrink-0
+                          ${activeAnnouncement.type === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
+                      activeAnnouncement.type === 'success' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30'}
+                      `}>
+                    <Bell size={28} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                      {activeAnnouncement.title}
+                    </h3>
+                    <div className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
+                      {activeAnnouncement.message}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-slate-800/50 flex justify-end">
+                <button
+                  onClick={() => setShowAnnouncement(false)}
+                  className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-xl hover:scale-105 transition-transform"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </nav >
   );
 };
 

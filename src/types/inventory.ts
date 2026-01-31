@@ -20,6 +20,7 @@ export interface Product {
   igvIncluded: boolean; // Precio incluye IGV (por defecto true)
   unitType: 'unidad' | 'kg'; // 'unidad' para unitario, 'kg' para peso
   ventaPorPeso: boolean; // true si se vende por peso
+  expirationDate?: Date | string; // Fecha de vencimiento opcional
   [key: string]: unknown;
 }
 

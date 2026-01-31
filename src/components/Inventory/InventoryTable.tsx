@@ -205,7 +205,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onDel
                         </button>
                         <button
                           className="p-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:scale-110 transition-transform"
-                          title="Historial"
+                          title="Ver Kardex / Historial"
                           onClick={() => onShowHistory && onShowHistory(product)}
                         >
                           <History size={16} />

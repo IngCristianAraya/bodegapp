@@ -154,6 +154,7 @@ export async function actualizarProducto(id: string, data: Partial<Product>, ten
     if (data.averageCost !== undefined) updateData.average_cost = data.averageCost;
     if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
     if (data.isExemptIGV !== undefined) updateData.is_exempt_igv = data.isExemptIGV;
+    if (data.expirationDate !== undefined) updateData.expiration_date = data.expirationDate;
 
     updateData.updated_at = new Date().toISOString();
 

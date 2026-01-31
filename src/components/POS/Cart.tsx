@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, Plus, Minus, ShoppingCart, X, ChevronRight } from 'lucide-react';
 import type { CartItem } from '../../types/index';
 import { motion, AnimatePresence } from 'framer-motion';
+import CashPaymentModal from './CashPaymentModal';
 
 interface CartProps {
   cart: CartItem[];
@@ -12,12 +13,13 @@ interface CartProps {
   tax: number;
   discount: number;
   setDiscount: (discount: number) => void;
-  onCheckout: (paymentMethod: string) => void;
+  onCheckout: (paymentMethod: string, paymentDetails?: { amountPaid: number; change: number }) => void;
   clearCart: () => void;
 }
 
 export default function Cart({ cart, removeFromCart, updateQuantity, total, subtotal, tax, discount, setDiscount, onCheckout, clearCart }: CartProps) {
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
   // const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null); // Unused
   const [discountInput, setDiscountInput] = useState(discount > 0 ? discount.toString() : '');
 
@@ -40,14 +42,19 @@ export default function Cart({ cart, removeFromCart, updateQuantity, total, subt
     { id: 'cash', name: 'Efectivo', icon: '💵', color: 'bg-green-100 text-green-700 border-green-200' },
     { id: 'card', name: 'Tarjeta', icon: '💳', color: 'bg-blue-100 text-blue-700 border-blue-200' },
     { id: 'yape', name: 'Yape', icon: '📱', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-    { id: 'plin', name: 'Plin', icon: '📲', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' }
+    { id: 'plin', name: 'Plin', icon: '📲', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+    { id: 'credit', name: 'Crédito', icon: '📒', color: 'bg-orange-100 text-orange-700 border-orange-200' }
   ];
 
   const handlePayment = (method: string) => {
     // setSelectedPaymentMethod(method);
     setShowPaymentMethods(false);
     setTimeout(() => {
-      onCheckout(method);
+      if (method === 'cash') {
+        setShowCashModal(true);
+      } else {
+        onCheckout(method);
+      }
     }, 250);
   };
 
@@ -236,6 +243,18 @@ export default function Cart({ cart, removeFromCart, updateQuantity, total, subt
             ))}
           </div>
         </div>
+      )}
+
+      {/* Cash Change Modal */}
+      {showCashModal && (
+        <CashPaymentModal
+          total={total}
+          onConfirm={(amountPaid, change) => {
+            setShowCashModal(false);
+            onCheckout('cash', { amountPaid, change });
+          }}
+          onClose={() => setShowCashModal(false)}
+        />
       )}
     </div>
   );

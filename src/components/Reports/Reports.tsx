@@ -3,619 +3,558 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketVenta from '../POS/TicketVenta';
 import ReportsMenu from './ReportsMenu';
+import ReportsDashboard from './ReportsDashboard';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
+import { getExpenses } from '../../lib/supabaseExpenses';
+import { obtenerHistorialCajas, CashRegister } from '../../lib/supabaseCashRegister';
+import { obtenerTodosMovimientosInventario } from '../../lib/supabaseInventory';
 import { getStoreSettings, StoreSettings } from '../../lib/supabaseSettings';
 import { useTenant } from '../../contexts/TenantContext';
-import { Sale, Product, SaleItem } from '../../types/index';
-import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight } from 'lucide-react';
-import { useSubscription } from '../../contexts/SubscriptionContext';
-import UpgradeAlert from '../common/UpgradeAlert';
-
+import { Sale, Product, SaleItem, Expense } from '../../types/index';
+import { InventoryMovement } from '../../types/inventory';
+import { FileText, Download, Calendar, Printer, Search, ArrowLeft, ArrowRight, AlertTriangle, TrendingUp, ShoppingCart } from 'lucide-react';
+// import { useSubscription } from '../../contexts/SubscriptionContext'; // Removed Pro check
 
 const Reports: React.FC = () => {
   const { tenant } = useTenant();
-  const { isPro } = useSubscription();
+  // const { isPro } = useSubscription(); // Removed Pro check
   const [showTicketModal, setShowTicketModal] = React.useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<Sale | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
-  const [reportType, setReportType] = useState<'ventas' | 'inventario' | 'ganancias' | 'movimientos'>('ventas');
+
+  const [reportType, setReportType] = useState<string>('dashboard');
+
+  // Data States
   const [ventas, setVentas] = useState<Sale[]>([]);
+  const [productos, setProductos] = useState<Product[]>([]);
+  const [gastos, setGastos] = useState<Expense[]>([]);
+  const [cierres, setCierres] = useState<CashRegister[]>([]);
+  const [movimientos, setMovimientos] = useState<InventoryMovement[]>([]);
+
+  // Filters
   const [fechaInicio, setFechaInicio] = useState<string>('');
   const [fechaFin, setFechaFin] = useState<string>('');
-  const [productos, setProductos] = useState<Product[]>([]);
-  const [ventasPage, setVentasPage] = useState(1);
-  const [inventarioPage, setInventarioPage] = useState(1);
-  const VENTAS_POR_PAGINA = 10;
-  const INVENTARIO_POR_PAGINA = 10;
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const [loading, setLoading] = useState(false);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
 
-  const cargarVentasYProductos = React.useCallback(async (): Promise<void> => {
-    if (!tenant?.id) return;
-    setLoading(true);
-    try {
-      const [ventasData, productosData, settingsData] = await Promise.all([
-        obtenerVentas(tenant.id),
-        obtenerProductos(tenant.id, true), // Include archived products for reports
-        getStoreSettings(tenant.id)
-      ]);
-      setVentas(ventasData);
-      setProductos(productosData);
-      setStoreSettings(settingsData);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenant?.id]);
-
-  const cargarProductos = React.useCallback(async (): Promise<void> => {
-    if (!tenant?.id) return;
-    setLoading(true);
-    try {
-      const productosData = await obtenerProductos(tenant.id, true); // Include archived products
-      setProductos(productosData);
-    } finally {
-      setLoading(false);
-    }
-  }, [tenant?.id]);
-
+  // Reset page on tab change
   useEffect(() => {
-    setLoading(true);
-    if (reportType === 'ventas' || reportType === 'ganancias') {
-      cargarVentasYProductos();
-    } else if (reportType === 'inventario') {
-      cargarProductos();
-    }
-  }, [reportType, cargarVentasYProductos, cargarProductos]);
-
-  useEffect(() => {
-    setVentasPage(1);
-    setInventarioPage(1);
+    setPage(1);
   }, [reportType]);
 
-  // Re-cargar configuración cuando se abre el modal del ticket
-  useEffect(() => {
-    if (showTicketModal && tenant?.id) {
-      getStoreSettings(tenant.id).then(setStoreSettings);
-    }
-  }, [showTicketModal, tenant?.id]);
+  const loadData = React.useCallback(async () => {
+    if (!tenant?.id) return;
+    setLoading(true);
+    try {
+      // Always fetch products for multiple reports
+      const p = await obtenerProductos(tenant.id, true);
+      setProductos(p);
 
-  function toCSV<T extends Record<string, unknown>>(rows: T[], headers: { key: string, label: string, format?: (val: unknown, row: T) => string }[]): string {
-    const headerRow = headers.map(h => h.label).join(';');
-    const escape = (val: unknown) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-    return [
-      headerRow,
-      ...rows.map(row => headers.map(h => {
-        let value = row[h.key];
-        if (h.format) value = h.format(value, row);
-        if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) value = '';
-        return escape(value);
-      }).join(';'))
-    ].join('\n');
-  }
-
-  function exportPDF<T extends Record<string, unknown>>({
-    rows,
-    headers,
-    title = '',
-    filename = 'reporte.pdf',
-  }: {
-    rows: T[],
-    headers: { key: string, label: string, format?: (val: unknown, row: T) => string }[],
-    title?: string,
-    filename?: string,
-  }): void {
-    const doc = new jsPDF();
-    if (title) {
-      doc.setFontSize(15);
-      doc.text(title, 14, 16);
-    }
-    autoTable(doc, {
-      head: [headers.map(h => h.label)],
-      body: rows.map(row => headers.map(h => {
-        let value = row[h.key];
-        if (h.format) value = h.format(value, row);
-        if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) value = '';
-        return String(value);
-      })),
-      startY: title ? 22 : 10,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [16, 185, 129] },
-      margin: { left: 10, right: 10 },
-    });
-    doc.save(filename);
-  }
-
-  const ventasHeaders: { key: string, label: string, format?: (val: unknown, row: Record<string, unknown>) => string }[] = [
-    { key: 'receiptNumber', label: 'N° Boleta' },
-    {
-      key: 'createdAt', label: 'Fecha', format: (val: unknown) => {
-        if (!val) return '-';
-        if (typeof val === 'object' && val !== null && 'seconds' in val) {
-          const d = new Date((val as { seconds: number }).seconds * 1000);
-          return d.toLocaleDateString();
-        }
-        if (val instanceof Date) return val.toLocaleDateString();
-        return String(val);
+      // Fetch Sales if needed (dashboard, ventas, ganancias, best sellers)
+      if (['dashboard', 'ventas', 'ganancias', 'mas_vendidos'].includes(reportType)) {
+        const [v, s] = await Promise.all([
+          obtenerVentas(tenant.id),
+          getStoreSettings(tenant.id)
+        ]);
+        setVentas(v);
+        setStoreSettings(s);
       }
-    },
+
+      // Expenses (dashboard, gastos)
+      if (['dashboard', 'gastos'].includes(reportType)) {
+        const g = await getExpenses(tenant.id);
+        setGastos(g);
+      }
+
+      // Others
+      if (reportType === 'cierre_caja') {
+        const c = await obtenerHistorialCajas(tenant.id);
+        setCierres(c);
+      } else if (reportType === 'movimientos') {
+        const m = await obtenerTodosMovimientosInventario(tenant.id);
+        setMovimientos(m);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [tenant?.id, reportType]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+
+  // --- HEADERS ---
+  const ventasHeaders = [
+    { key: 'receiptNumber', label: 'N° Boleta' },
+    { key: 'createdAt', label: 'Fecha', format: (val: any) => new Date(val?.seconds ? val.seconds * 1000 : val).toLocaleDateString() },
     { key: 'cashierName', label: 'Cajero' },
     { key: 'customerName', label: 'Cliente' },
-    { key: 'total', label: 'Total', format: (val: unknown) => `S/ ${typeof val === 'number' ? val.toFixed(2) : '0.00'}` },
-    { key: 'paymentMethod', label: 'Método de Pago', format: (val: unknown) => val === 'cash' ? 'Efectivo' : String(val) },
-    {
-      key: 'items', label: 'Detalle', format: (_: unknown, row: Record<string, unknown>) => {
-        const arr = Array.isArray(row.items) ? row.items as SaleItem[] : [];
-        return arr.map((i: SaleItem) => {
-          const nombre = i.productName;
-          const cantidad = i.quantity;
-          const precio = i.unitPrice;
-          const subtotal = typeof precio === 'number' && typeof cantidad === 'number' ? precio * cantidad : 0;
-          return `${nombre} x${cantidad} S/ ${subtotal.toFixed(2)}`;
-        }).join(', ');
-      }
-    },
+    { key: 'total', label: 'Total', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'paymentMethod', label: 'Método' },
   ];
 
   const inventarioHeaders = [
-    { key: 'name', label: 'Producto' },
     { key: 'code', label: 'Código' },
-    { key: 'category', label: 'Categoría' },
-    { key: 'unit', label: 'Unidad' },
+    { key: 'name', label: 'Producto' },
     { key: 'stock', label: 'Stock' },
-    { key: 'salePrice', label: 'Precio Venta', format: (val: unknown) => `S/ ${Number(val).toFixed(2)}` },
-    { key: 'averageCost', label: 'Costo Promedio', format: (val: unknown) => `S/ ${Number(val).toFixed(2)}` },
-    { key: 'supplier', label: 'Proveedor' },
+    { key: 'salePrice', label: 'Precio', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+    { key: 'averageCost', label: 'Costo', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
   ];
 
-  const exportReportCSV = (): void => {
-    let csv = '';
-    let filename = '';
-    if (reportType === 'ventas') {
-      const ventasFiltradas = ventas.filter(filterVentas);
-      csv = toCSV(ventasFiltradas, ventasHeaders);
-      filename = 'ventas.csv';
-    } else if (reportType === 'inventario') {
-      csv = toCSV(productos, inventarioHeaders);
-      filename = 'inventario.csv';
-    } else {
-      alert('Descarga CSV solo disponible para ventas e inventario');
-      return;
-    }
-    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  const gastosHeaders = [
+    { key: 'date', label: 'Fecha', format: (val: any) => new Date(val).toLocaleDateString() },
+    { key: 'description', label: 'Descripción' },
+    { key: 'category', label: 'Categoría' },
+    { key: 'amount', label: 'Monto', format: (val: any) => `S/ ${Number(val).toFixed(2)}` },
+  ];
+
+  const cierresHeaders = [
+    { key: 'opened_at', label: 'Apertura', format: (val: any) => new Date(val).toLocaleString() },
+    { key: 'closed_at', label: 'Cierre', format: (val: any) => val ? new Date(val).toLocaleString() : '-' },
+    { key: 'total_sales_cash', label: 'V. Efectivo', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
+    { key: 'total_sales_digital', label: 'V. Digital', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
+    { key: 'closing_amount', label: 'En Caja', format: (val: any) => `S/ ${Number(val ?? 0).toFixed(2)}` },
+  ];
+
+  const movimientosHeaders = [
+    { key: 'date', label: 'Fecha', format: (val: any) => new Date(val).toLocaleString() },
+    { key: 'productName', label: 'Producto' },
+    { key: 'type', label: 'Tipo', format: (val: any) => String(val).toUpperCase() },
+    { key: 'quantity', label: 'Cantidad' },
+    { key: 'motivo', label: 'Motivo / Justificación' },
+    { key: 'cashierName', label: 'Usuario' },
+  ];
+
+  const gananciasHeaders = [
+    { key: 'dateLabel', label: 'Fecha' },
+    { key: 'ventas', label: 'Venta Total', format: (val: any) => `S/ ${val.toFixed(2)}` },
+    { key: 'costo', label: 'Costo Mercadería', format: (val: any) => `S/ ${val.toFixed(2)}` },
+    { key: 'ganancia', label: 'Ganancia Neta', format: (val: any) => `S/ ${val.toFixed(2)}` },
+    { key: 'margen', label: 'Margen %', format: (val: any) => `${val}%` },
+  ];
+
+  const bestSellersHeaders = [
+    { key: 'rank', label: '#' },
+    { key: 'productName', label: 'Producto' },
+    { key: 'quantity', label: 'Und. Vendidas' },
+    { key: 'revenue', label: 'Ingresos Totales', format: (val: any) => `S/ ${val.toFixed(2)}` },
+    { key: 'avgPrice', label: 'Precio Prom.', format: (val: any) => `S/ ${val.toFixed(2)}` },
+  ];
+
+  const sugerenciasHeaders = [
+    { key: 'productName', label: 'Producto' },
+    { key: 'stock', label: 'Stock Actual' },
+    { key: 'minStock', label: 'Stock Mínimo' },
+    { key: 'supplier', label: 'Proveedor' },
+    { key: 'status', label: 'Estado' },
+  ];
+
+
+  // --- PROCESSING LOGIC ---
+
+  const getDailyProfits = () => {
+    const dailyData: Record<string, { dateLabel: string, ventas: number, costo: number, ganancia: number }> = {};
+
+    ventas.filter(filterByDate).forEach(sale => {
+      const d = new Date(sale.createdAt as any);
+      if (isNaN(d.getTime())) return;
+      const key = d.toLocaleDateString();
+
+      if (!dailyData[key]) {
+        dailyData[key] = { dateLabel: key, ventas: 0, costo: 0, ganancia: 0 };
+      }
+
+      const saleTotal = sale.total || 0;
+      let saleCost = 0;
+
+      if (sale.items && Array.isArray(sale.items)) {
+        sale.items.forEach(item => {
+          // Find product to get cost
+          const product = productos.find(p => p.id === item.productId || p.name === item.productName);
+          const unitCost = product?.averageCost || product?.costPrice || 0;
+          saleCost += (item.quantity * unitCost);
+        });
+      }
+
+      dailyData[key].ventas += saleTotal;
+      dailyData[key].costo += saleCost;
+      dailyData[key].ganancia += (saleTotal - saleCost);
+    });
+
+    return Object.values(dailyData)
+      .sort((a, b) => new Date(b.dateLabel).getTime() - new Date(a.dateLabel).getTime()) // Sort desc
+      .map(d => ({
+        ...d,
+        margen: d.ventas > 0 ? ((d.ganancia / d.ventas) * 100).toFixed(1) : '0.0'
+      }));
   };
 
-  const exportReportPDF = () => {
-    let filename = '';
-    let headers: { key: string; label: string; format?: (val: unknown, row: Record<string, unknown>) => string }[] = [];
-    let rows: Record<string, unknown>[] = [];
+  const getBestSellers = () => {
+    const productStats: Record<string, { productName: string, quantity: number, revenue: number }> = {};
+
+    ventas.filter(filterByDate).forEach(v => {
+      v.items?.forEach(i => {
+        const name = i.productName || 'Desconocido';
+        if (!productStats[name]) productStats[name] = { productName: name, quantity: 0, revenue: 0 };
+        productStats[name].quantity += i.quantity;
+        productStats[name].revenue += (i.total || (i.quantity * i.unitPrice));
+      });
+    });
+
+    return Object.values(productStats)
+      .sort((a, b) => b.quantity - a.quantity)
+      .map((p, idx) => ({
+        rank: idx + 1,
+        ...p,
+        avgPrice: p.quantity > 0 ? p.revenue / p.quantity : 0
+      }));
+  };
+
+  const getReorderSuggestions = () => {
+    return productos
+      .filter(p => p.stock <= (p.minStock || 0)) // Only low stock
+      .map(p => ({
+        productName: p.name,
+        stock: p.stock,
+        minStock: p.minStock || 0,
+        supplier: p.supplier || 'General',
+        status: p.stock === 0 ? 'AGOTADO' : 'BAJO STOCK'
+      }))
+      .sort((a, b) => a.stock - b.stock);
+  };
+
+
+  // --- EXPORT ---
+
+  function toCSV(rows: any[], headers: any[]) {
+    const list = [
+      headers.map(h => h.label).join(';'),
+      ...rows.map(r => headers.map(h => {
+        let val = r[h.key];
+        if (h.format) val = h.format(val, r);
+        return `"${String(val ?? '').replace(/"/g, '""')}"`;
+      }).join(';'))
+    ].join('\n');
+    return new Blob(["\uFEFF" + list], { type: 'text/csv' });
+  }
+
+  const handleExport = (format: 'csv' | 'pdf') => {
+    let data: any[] = [];
+    let headers: any[] = [];
     let title = '';
+
     if (reportType === 'ventas') {
-      filename = 'ventas.pdf';
+      data = ventas.filter(filterByDate);
       headers = ventasHeaders;
-      rows = ventas.filter(filterVentas);
       title = 'Reporte de Ventas';
     } else if (reportType === 'inventario') {
-      filename = 'inventario.pdf';
+      data = productos;
       headers = inventarioHeaders;
-      rows = productos;
       title = 'Reporte de Inventario';
-    } else {
-      alert('Descarga PDF solo disponible para ventas e inventario');
+    } else if (reportType === 'gastos') {
+      data = gastos.filter(filterByDate);
+      headers = gastosHeaders;
+      title = 'Reporte de Gastos';
+    } else if (reportType === 'cierre_caja') {
+      data = cierres;
+      headers = cierresHeaders;
+      title = 'Reporte de Cierres de Caja';
+    } else if (reportType === 'movimientos') {
+      data = movimientos.filter(filterByDate);
+      headers = movimientosHeaders;
+      title = 'Reporte de Movimientos';
+    } else if (reportType === 'ganancias') {
+      data = getDailyProfits();
+      headers = gananciasHeaders;
+      title = 'Reporte de Ganancias';
+    } else if (reportType === 'mas_vendidos') {
+      data = getBestSellers();
+      headers = bestSellersHeaders;
+      title = 'Ranking de Productos Más Vendidos';
+    } else if (reportType === 'sugerencias') {
+      data = getReorderSuggestions();
+      headers = sugerenciasHeaders;
+      title = 'Sugerencia de Compra (Stock Bajo)';
+    }
+
+    if (data.length === 0 && format !== 'dashboard') {
+      alert("No hay datos para exportar.");
       return;
     }
-    exportPDF({ rows, headers, title, filename });
-  };
 
-  const handlePageChange = (type: 'ventas' | 'inventario', page: number) => {
-    if (type === 'ventas') {
-      setVentasPage(page);
+    if (format === 'csv') {
+      const blob = toCSV(data, headers);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportType}.csv`;
+      a.click();
     } else {
-      setInventarioPage(page);
+      const doc = new jsPDF();
+      doc.text(title, 14, 15);
+      autoTable(doc, {
+        head: [headers.map(h => h.label)],
+        body: data.map(r => headers.map(h => {
+          let val = r[h.key];
+          if (h.format) val = h.format(val, r);
+          return String(val);
+        })),
+        startY: 20,
+        styles: { fontSize: 8 }
+      });
+      doc.save(`${reportType}.pdf`);
     }
   };
 
-  const filterVentas = (v: Sale) => {
+  const filterByDate = (item: any) => {
     if (!fechaInicio && !fechaFin) return true;
+    const dateVal = item.createdAt || item.date || item.opened_at || (item.dateLabel ? new Date(item.dateLabel) : null);
+    if (!dateVal) return false;
 
-    let fecha: Date | null = null;
-
-    // Handle different date formats safely
-    if (v.createdAt instanceof Date) {
-      fecha = v.createdAt;
-    } else if (typeof v.createdAt === 'string') {
-      fecha = new Date(v.createdAt);
-    } else if (
-      v.createdAt &&
-      typeof v.createdAt === 'object' &&
-      'seconds' in v.createdAt
-    ) {
-      // Handle Firestore Timestamp like objects
-      const timestamp = v.createdAt as { seconds: number };
-      if (typeof timestamp.seconds === 'number') {
-        fecha = new Date(timestamp.seconds * 1000);
-      }
-    }
-
-    if (!fecha || isNaN(fecha.getTime())) return false;
+    let d = new Date(dateVal.seconds ? dateVal.seconds * 1000 : dateVal);
+    if (isNaN(d.getTime())) return false;
 
     if (fechaInicio) {
-      const start = new Date(fechaInicio);
-      start.setHours(0, 0, 0, 0);
-      if (fecha < start) return false;
+      if (d < new Date(fechaInicio)) return false;
     }
-
     if (fechaFin) {
       const end = new Date(fechaFin);
-      end.setHours(23, 59, 59, 999);
-      if (fecha > end) return false;
+      end.setHours(23, 59, 59);
+      if (d > end) return false;
     }
-
     return true;
   };
 
-  // Adapta la venta seleccionada a la estructura esperada por TicketVenta
-  function mapVentaToTicket(venta: Sale) {
-    const items = (Array.isArray(venta.items) ? venta.items : []).map((i: SaleItem) => ({
-      productName: i.productName || '',
-      quantity: i.quantity || 1,
-      unitPrice: typeof i.unitPrice === 'number' ? i.unitPrice : 0,
-    }));
+  // Pagination Helper
+  const getPaginatedData = (data: any[]) => {
+    // Logic split for pre-processed data like Profits vs raw data like Sales
+    let filtered = data;
+    // Ganancias, Best Sellers, and Sugerencias are derived/already filtered or shouldn't be filtered by date same way
+    if (['ventas', 'gastos', 'movimientos', 'cierre_caja'].includes(reportType)) {
+      filtered = data.filter(filterByDate);
+    }
+
+    const start = (page - 1) * ITEMS_PER_PAGE;
     return {
-      receiptNumber: String(venta.receiptNumber ?? '-'),
-      cashierName: String(venta.cashierName ?? '-'),
-      customerName: String(venta.customerName ?? ''),
-      paymentMethod: String(venta.paymentMethod === 'cash' ? 'Efectivo' : (venta.paymentMethod ?? '-')),
-      date: venta.createdAt
-        ? (typeof venta.createdAt === 'object' && venta.createdAt !== null && 'seconds' in venta.createdAt && typeof (venta.createdAt as { seconds?: unknown }).seconds === 'number'
-          ? new Date((venta.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
-          : new Date(venta.createdAt as string | Date).toLocaleDateString())
-        : '-',
-      items,
-      subtotal: typeof venta.subtotal === 'number' ? venta.subtotal : (typeof venta.total === 'number' && typeof venta.igv === 'number' ? venta.total - (venta.igv || 0) + (venta.discount || 0) : 0),
-      discount: typeof venta.discount === 'number' ? venta.discount : 0,
-      igv: typeof venta.igv === 'number' ? venta.igv : 0,
-      total: typeof venta.total === 'number' ? venta.total : 0,
+      data: filtered.slice(start, start + ITEMS_PER_PAGE),
+      totalPages: Math.ceil(filtered.length / ITEMS_PER_PAGE),
+      totalItems: filtered.length
     };
-  }
+  };
+
+  // Render content based on current view
+  const renderTableContent = () => {
+    if (reportType === 'dashboard') {
+      return <ReportsDashboard ventas={ventas} productos={productos} gastos={gastos} />;
+    }
+
+    if (reportType === 'ganancias') {
+      const profits = getDailyProfits();
+      const { data } = getPaginatedData(profits);
+      return (
+        <table className="w-full text-sm">
+          <thead className="bg-emerald-50 dark:bg-emerald-900/30">
+            <tr>{gananciasHeaders.map(h => <th key={h.key} className="py-3 px-4 text-left font-semibold text-emerald-900 dark:text-emerald-400">{h.label}</th>)}</tr>
+          </thead>
+          <tbody className="divide-y dark:divide-gray-700">
+            {data.map((row, i) => (
+              <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+                <td className="py-3 px-4 font-medium">{row.dateLabel}</td>
+                <td className="py-3 px-4 font-semibold">S/ {row.ventas.toFixed(2)}</td>
+                <td className="py-3 px-4 text-red-500">S/ {row.costo.toFixed(2)}</td>
+                <td className="py-3 px-4 text-emerald-600 font-bold">S/ {row.ganancia.toFixed(2)}</td>
+                <td className="py-3 px-4 text-gray-500">{row.margen}%</td>
+              </tr>
+            ))}
+            {data.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-gray-400">No hay datos en este rango.</td></tr>}
+          </tbody>
+        </table>
+      );
+    }
+
+    // Generic Table setup
+    let headers: any[] = [];
+    let dataSrc: any[] = [];
+
+    if (reportType === 'ventas') { headers = ventasHeaders; dataSrc = ventas; }
+    else if (reportType === 'inventario') { headers = inventarioHeaders; dataSrc = productos; }
+    else if (reportType === 'gastos') { headers = gastosHeaders; dataSrc = gastos; }
+    else if (reportType === 'cierre_caja') { headers = cierresHeaders; dataSrc = cierres; }
+    else if (reportType === 'movimientos') { headers = movimientosHeaders; dataSrc = movimientos; }
+    else if (reportType === 'mas_vendidos') { headers = bestSellersHeaders; dataSrc = getBestSellers(); }
+    else if (reportType === 'sugerencias') { headers = sugerenciasHeaders; dataSrc = getReorderSuggestions(); }
+
+    const paginated = getPaginatedData(dataSrc);
+
+    return (
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 dark:bg-slate-800">
+          <tr>
+            {headers.map(h => <th key={h.key} className="py-3 px-4 text-left font-semibold text-gray-600 dark:text-gray-300">{h.label}</th>)}
+            {reportType === 'ventas' && <th className="py-3 px-4 text-center">Acción</th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y dark:divide-gray-700">
+          {paginated.data.map((row, i) => (
+            <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+              {headers.map(h => {
+                let val = row[h.key];
+                if (h.key === 'motivo' && !val && row.type) val = row.type === 'ingreso' ? 'Compra' : 'Venta';
+
+                // Special styling for restock
+                if (h.key === 'status') {
+                  return (
+                    <td key={h.key} className="py-3 px-4">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${val === 'AGOTADO' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {val}
+                      </span>
+                    </td>
+                  )
+                }
+                if (h.format) val = h.format(val, row);
+                return <td key={h.key} className="py-3 px-4">{val}</td>
+              })}
+              {reportType === 'ventas' && (
+                <td className="py-3 px-4 text-center">
+                  <button onClick={() => { setVentaSeleccionada(row); setShowTicketModal(true); }} className="text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-full"><Printer size={16} /></button>
+                </td>
+              )}
+            </tr>
+          ))}
+          {paginated.data.length === 0 && <tr><td colSpan={headers.length + 1} className="text-center py-8 text-gray-400">No hay datos para mostrar.</td></tr>}
+        </tbody>
+      </table>
+    );
+  };
+
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in duration-500">
-
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between gap-4 items-end">
         <div>
-          <h1 className="text-3xl font-heading font-extrabold text-gray-800 dark:text-white">
-            Reportes
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Visualiza y exporta el rendimiento de tu negocio</p>
+          <h1 className="text-3xl font-heading font-extrabold text-gray-800 dark:text-white">Reportes</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Visión completa de tu negocio</p>
         </div>
 
-        {(reportType === 'ventas' || reportType === 'inventario') && (
-          <div className="flex bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1 gap-2">
-            <button
-              onClick={exportReportCSV}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg transition-colors"
-            >
-              <FileText size={16} />
-              CSV
+        {reportType !== 'dashboard' && (
+          <div className="flex gap-2 bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <button onClick={() => handleExport('csv')} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg">
+              <FileText size={16} /> CSV
             </button>
-            <button
-              onClick={exportReportPDF}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-lg transition-colors"
-            >
-              <Download size={16} />
-              PDF
+            <button onClick={() => handleExport('pdf')} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg">
+              <Download size={16} /> PDF
             </button>
           </div>
         )}
       </div>
 
-      {/* Tabs / Menu */}
-      <div className="flex flex-wrap gap-4 items-center bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
-        <ReportsMenu onSelect={t => setReportType(t as 'ventas' | 'inventario' | 'ganancias' | 'movimientos')} />
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-x-auto">
+        <ReportsMenu onSelect={setReportType} />
 
-        {/* Date Filter Inline */}
-        {(reportType === 'ventas' || reportType === 'inventario') && (
-          <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-200 dark:border-gray-700">
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={e => setFechaInicio(e.target.value)}
-                className="pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+        {(['ventas', 'gastos', 'cierre_caja', 'movimientos', 'ganancias'].includes(reportType)) && (
+          <div className="mt-4 flex items-center gap-2 border-t pt-4 border-gray-100 dark:border-gray-700 justify-end">
+            <span className="text-sm text-gray-400">Filtrar por fecha:</span>
+            <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="p-2 border rounded-lg text-sm dark:bg-slate-700 dark:border-gray-600" />
             <span className="text-gray-400">-</span>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={e => setFechaFin(e.target.value)}
-                className="pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+            <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} className="p-2 border rounded-lg text-sm dark:bg-slate-700 dark:border-gray-600" />
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className={`rounded-2xl shadow-xl overflow-hidden min-h-[400px] ${reportType === 'dashboard' ? '' : 'glass-card bg-white/90 dark:bg-slate-900 border border-white/40 dark:border-gray-700'}`}>
+        {loading ? (
+          <div className="flex justify-center items-center h-64 text-gray-400">Cargando datos...</div>
+        ) : (
+          <div className={reportType === 'dashboard' ? '' : 'overflow-x-auto'}>
+            {renderTableContent()}
+          </div>
+        )}
+
+        {/* Pagination Controls - Hide for Dashboard */}
+        {!loading && reportType !== 'dashboard' && (
+          <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-slate-800/50">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="flex items-center gap-1 text-sm font-medium disabled:opacity-50">
+              <ArrowLeft size={16} /> Anterior
+            </button>
+            <span className="text-sm text-gray-500">Página {page}</span>
+            <button onClick={() => setPage(p => p + 1)} className="flex items-center gap-1 text-sm font-medium disabled:opacity-50">
+              Siguiente <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Ticket Modal Logic (Preserved) */}
+      {showTicketModal && ventaSeleccionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b flex items-center justify-between">
+              <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
+              <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <Search className="rotate-45" size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
+              <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
+                <div ref={ticketRef} className="p-2">
+                  <TicketVenta venta={{
+                    receiptNumber: String(ventaSeleccionada.receiptNumber),
+                    cashierName: ventaSeleccionada.cashierName || '-',
+                    customerName: ventaSeleccionada.customerName || '',
+                    paymentMethod: ventaSeleccionada.paymentMethod === 'cash' ? 'Efectivo' : ventaSeleccionada.paymentMethod,
+                    date: new Date(ventaSeleccionada.createdAt as any).toLocaleDateString(),
+                    items: ventaSeleccionada.items?.map(i => ({ productName: i.productName!, quantity: i.quantity!, unitPrice: i.unitPrice! })) || [],
+                    subtotal: ventaSeleccionada.subtotal || 0,
+                    discount: ventaSeleccionada.discount || 0,
+                    igv: ventaSeleccionada.igv || 0,
+                    total: ventaSeleccionada.total || 0
+                  }} settings={storeSettings} />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
+              <button
+                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
+                onClick={() => setShowTicketModal(false)}
+              >
+                Cerrar
+              </button>
+              <button
+                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                onClick={() => {
+                  if (ticketRef.current) {
+                    const printContents = ticketRef.current.innerHTML;
+                    const win = window.open('', '', 'width=400,height=600');
+                    if (win) {
+                      win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
+                      win.document.close();
+                      win.focus();
+                      setTimeout(() => {
+                        win.print();
+                        win.close();
+                      }, 500);
+                    }
+                  }
+                }}
+              >
+                <Printer size={18} />
+                Imprimir
+              </button>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Content Area */}
-      <div className="glass-card rounded-2xl shadow-xl overflow-hidden border border-white/40 dark:border-gray-700 bg-white/90 dark:bg-slate-900">
-
-        {!isPro && (reportType === 'ganancias' || reportType === 'movimientos') ? (
-          <div className="p-8 flex justify-center items-center min-h-[400px]">
-            <UpgradeAlert
-              title="Reportes Avanzados"
-              message="El análisis de ganancias y movimientos de inventario detallados solo está disponible en el Plan PRO."
-              className="max-w-2xl w-full"
-            />
-          </div>
-        ) : (
-          <>
-            {reportType === 'ventas' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
-                    <tr>
-                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">N° Boleta</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Fecha</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Cajero</th>
-                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Detalle</th>
-                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Total</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Método</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                    {ventas
-                      .filter(filterVentas)
-                      .sort((a, b) => {
-                        const nA = Number(a.receiptNumber);
-                        const nB = Number(b.receiptNumber);
-                        if (!isNaN(nA) && !isNaN(nB)) return nB - nA;
-                        return String(b.receiptNumber).localeCompare(String(a.receiptNumber));
-                      })
-                      .slice((ventasPage - 1) * VENTAS_POR_PAGINA, ventasPage * VENTAS_POR_PAGINA)
-                      .map((v, idx) => {
-                        const arr = Array.isArray(v.items) && v.items.length > 0 ? v.items : [];
-                        return (
-                          <tr key={v.id || idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors group">
-                            <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400">{v.receiptNumber || '-'}</td>
-                            <td className="py-3 px-6 text-center">
-                              <span className="bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs font-medium">
-                                {v.createdAt
-                                  ? (typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number'
-                                    ? new Date((v.createdAt as { seconds: number }).seconds * 1000).toLocaleDateString()
-                                    : new Date(v.createdAt as string | number | Date).toLocaleDateString())
-                                  : '-'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-6 text-center text-gray-600 dark:text-gray-300">{v.cashierName || '-'}</td>
-                            <td className="py-3 px-6 text-xs text-gray-500 dark:text-gray-400">
-                              {arr.slice(0, 2).map((i, k) => (
-                                <div key={k} className="text-gray-600 dark:text-gray-300">{i.productName} (x{i.quantity})</div>
-                              ))}
-                              {arr.length > 2 && <div className="text-gray-400 dark:text-gray-500 italic">+{arr.length - 2} más...</div>}
-                            </td>
-                            <td className="py-3 px-6 text-right font-bold text-gray-800 dark:text-white">S/ {v.total?.toFixed(2)}</td>
-                            <td className="py-3 px-6 text-center">
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${v.paymentMethod === 'cash' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'}`}>
-                                {v.paymentMethod === 'cash' ? 'Efectivo' : v.paymentMethod}
-                              </span>
-                            </td>
-                            <td className="py-3 px-6 text-center">
-                              <button
-                                className="text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 p-2 rounded-full transition-all"
-                                onClick={() => {
-                                  setVentaSeleccionada(v);
-                                  setShowTicketModal(true);
-                                }}
-                                title="Ver Ticket"
-                              >
-                                <Printer size={18} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-
-                {/* Pagination Controls */}
-                <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
-                  <button
-                    onClick={() => handlePageChange('ventas', ventasPage - 1)}
-                    disabled={ventasPage === 1}
-                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-                  >
-                    <ArrowLeft size={16} /> Anterior
-                  </button>
-                  <span className="text-sm text-gray-400 dark:text-gray-500">Página {ventasPage} de {Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}</span>
-                  <button
-                    onClick={() => handlePageChange('ventas', ventasPage + 1)}
-                    disabled={ventasPage === Math.ceil(ventas.filter(filterVentas).length / VENTAS_POR_PAGINA)}
-                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-                  >
-                    Siguiente <ArrowRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {reportType === 'inventario' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-700">
-                    <tr>
-                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Código</th>
-                      <th className="py-4 px-6 text-left font-semibold text-gray-600 dark:text-gray-300">Producto</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Stock</th>
-                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Precio Venta</th>
-                      <th className="py-4 px-6 text-right font-semibold text-gray-600 dark:text-gray-300">Costo Promedio</th>
-                      <th className="py-4 px-6 text-center font-semibold text-gray-600 dark:text-gray-300">Proveedor</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                    {productos.slice((inventarioPage - 1) * INVENTARIO_POR_PAGINA, inventarioPage * INVENTARIO_POR_PAGINA).map((p, i) => (
-                      <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-3 px-6 font-mono text-gray-500 dark:text-gray-400 text-xs">{p.code}</td>
-                        <td className="py-3 px-6 font-bold text-gray-800 dark:text-white">{p.name}</td>
-                        <td className="py-3 px-6 text-center">
-                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${p.stock <= (p.minStock ?? 0) ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'}`}>
-                            {p.stock}
-                          </span>
-                        </td>
-                        <td className="py-3 px-6 text-right font-semibold text-gray-900 dark:text-white">S/ {p.salePrice?.toFixed(2)}</td>
-                        <td className="py-3 px-6 text-right text-gray-500 dark:text-gray-400">S/ {p.averageCost?.toFixed(2)}</td>
-                        <td className="py-3 px-6 text-center text-xs text-gray-500 dark:text-gray-400">{p.supplier || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="flex justify-between items-center p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-slate-800/30">
-                  <button
-                    onClick={() => handlePageChange('inventario', inventarioPage - 1)}
-                    disabled={inventarioPage === 1}
-                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-                  >
-                    <ArrowLeft size={16} /> Anterior
-                  </button>
-                  <span className="text-sm text-gray-400 dark:text-gray-500">Página {inventarioPage} de {Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}</span>
-                  <button
-                    onClick={() => handlePageChange('inventario', inventarioPage + 1)}
-                    disabled={inventarioPage === Math.ceil(productos.length / INVENTARIO_POR_PAGINA)}
-                    className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-50"
-                  >
-                    Siguiente <ArrowRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {reportType === 'ganancias' && !loading && ventas.length > 0 && (
-              <div className="p-6">
-                <table className="w-full border-separate border-spacing-0 rounded-xl overflow-hidden shadow-sm mb-4 bg-white dark:bg-slate-900">
-                  <thead>
-                    <tr className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-900 dark:text-emerald-400 text-sm">
-                      <th className="py-3 px-4 text-center font-semibold">Fecha</th>
-                      <th className="py-3 px-4 text-right font-semibold">Ventas Totales</th>
-                      <th className="py-3 px-4 text-right font-semibold">Costo Total</th>
-                      <th className="py-3 px-4 text-right font-semibold">Ganancia Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                      const resumen: { [fecha: string]: { label: string, ventas: number, costo: number, ganancia: number } } = {};
-                      ventas.filter(filterVentas).forEach(v => {
-                        let fecha = null;
-                        if (v.createdAt instanceof Date) fecha = v.createdAt;
-                        else if (v.createdAt && typeof v.createdAt === 'object' && v.createdAt !== null && 'seconds' in v.createdAt && typeof (v.createdAt as { seconds: number }).seconds === 'number') fecha = new Date((v.createdAt as { seconds: number }).seconds * 1000);
-                        else if (typeof v.createdAt === 'string') fecha = new Date(v.createdAt);
-                        if (!fecha || isNaN(fecha.getTime())) return;
-
-                        const year = fecha.getFullYear();
-                        const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                        const day = fecha.getDate().toString().padStart(2, '0');
-                        const key = `${year}-${month}-${day}`;
-                        const label = `${dias[fecha.getDay()]} ${day}/${month}`;
-                        if (!resumen[key]) resumen[key] = { label, ventas: 0, costo: 0, ganancia: 0 };
-                        resumen[key].ventas += v.total || 0;
-
-                        let costoVenta = 0;
-                        let gananciaVenta = 0;
-                        (Array.isArray(v.items) && v.items.length > 0 ? v.items : []).forEach((item: SaleItem) => {
-                          const cantidad = item.quantity || 1;
-                          const precio = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
-                          const producto = productos.find((p: Product) => p.id === item.productId);
-                          const costoUnit = producto?.costPrice ?? producto?.averageCost ?? 0;
-                          const costo = cantidad * costoUnit;
-                          const subtotal = cantidad * precio;
-                          costoVenta += costo;
-                          gananciaVenta += subtotal - costo;
-                        });
-                        resumen[key].costo += costoVenta;
-                        resumen[key].ganancia += gananciaVenta;
-                      });
-                      return Object.entries(resumen)
-                        .sort((a, b) => b[0].localeCompare(a[0]))
-                        .map(([key, data]) => (
-                          <tr key={key} className="border-b last:border-0 border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                            <td className="py-3 px-4 text-center font-medium text-gray-700 dark:text-gray-300">{data.label}</td>
-                            <td className="py-3 px-4 text-right text-gray-900 dark:text-white font-semibold">S/ {data.ventas.toFixed(2)}</td>
-                            <td className="py-3 px-4 text-right text-red-500 dark:text-red-400">S/ {data.costo.toFixed(2)}</td>
-                            <td className="py-3 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400">S/ {data.ganancia.toFixed(2)}</td>
-                          </tr>
-                        ));
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-
-            {/* Ticket Modal */}
-            {showTicketModal && ventaSeleccionada && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh]">
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <span className="font-bold text-lg text-gray-800">Ticket de Venta</span>
-                    <button onClick={() => setShowTicketModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                      <Search className="rotate-45" size={20} />
-                    </button>
-                  </div>
-
-                  <div className="p-4 overflow-y-auto bg-gray-50 flex-1">
-                    <div className="bg-white shadow-lg mx-auto" style={{ width: 'fit-content' }}>
-                      <div ref={ticketRef} className="p-2">
-                        <TicketVenta venta={mapVentaToTicket(ventaSeleccionada)} settings={storeSettings} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 border-t bg-white rounded-b-2xl flex gap-3">
-                    <button
-                      className="flex-1 bg-gray-100 text-gray-700 px-4 py-2.5 rounded-xl hover:bg-gray-200 font-semibold transition-colors"
-                      onClick={() => setShowTicketModal(false)}
-                    >
-                      Cerrar
-                    </button>
-                    <button
-                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 font-semibold shadow-lg shadow-emerald-200 transition-all active:scale-95"
-                      onClick={() => {
-                        if (!ticketRef.current) return;
-                        const printContents = ticketRef.current.innerHTML;
-                        const win = window.open('', '', 'width=400,height=600');
-                        if (win) {
-                          win.document.write('<html><head><title>Imprimir Ticket</title><style>body{margin:0;font-family:sans-serif;}@media print{body{background:transparent;}}</style></head><body>' + printContents + '</body></html>');
-                          win.document.close();
-                          win.focus();
-                          setTimeout(() => {
-                            win.print();
-                            win.close();
-                          }, 500);
-                        }
-                      }}
-                    >
-                      <Printer size={18} />
-                      Imprimir
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

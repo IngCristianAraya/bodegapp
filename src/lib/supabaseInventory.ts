@@ -19,6 +19,7 @@ export async function crearProducto(
         is_exonerated: producto.isExonerated,
         igv_included: producto.igvIncluded,
         venta_por_peso: producto.ventaPorPeso,
+        expiration_date: producto.expirationDate,
 
         stock: primerIngreso.quantity,
         average_cost: primerIngreso.costPrice,
@@ -38,6 +39,7 @@ export async function crearProducto(
     delete productData.isExonerated;
     delete productData.igvIncluded;
     delete productData.ventaPorPeso;
+    delete productData.expirationDate;
 
     const { data: newProduct, error: prodError } = await supabase
         .from('products')

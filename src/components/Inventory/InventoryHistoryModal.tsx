@@ -42,9 +42,13 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
         const d = new Date(mov.date);
         return isNaN(d.getTime()) ? '-' : d.toLocaleString();
       })(),
-      Cantidad: mov.quantity,
-      'Precio Compra': mov.costPrice,
-      Total: mov.quantity * mov.costPrice
+      'Tipo': mov.type === 'ingreso' ? 'INGRESO' : mov.type === 'egreso' ? 'SALIDA' : 'AJUSTE',
+      'Motivo': mov.motivo || '-',
+      'Stock Inicial': mov.initialStock,
+      'Cantidad': mov.quantity,
+      'Stock Final': mov.finalStock,
+      'Costo Unit.': mov.costPrice,
+      'Total': mov.quantity * mov.costPrice
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -57,7 +61,7 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
     const doc = new jsPDF();
     autoTable(doc, {
       head: [[
-        'Fecha', 'Cantidad', 'Precio Compra', 'Total'
+        'Fecha', 'Tipo', 'Motivo', 'Inicial', 'Cant.', 'Final', 'Costo', 'Total'
       ]],
       body: movements.map(mov => [
         (() => {
@@ -68,7 +72,11 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
           const d = new Date(mov.date);
           return isNaN(d.getTime()) ? '-' : d.toLocaleString();
         })(),
+        mov.type.toUpperCase(),
+        mov.motivo || '-',
+        mov.initialStock !== undefined ? mov.initialStock : '-',
         mov.quantity,
+        mov.finalStock !== undefined ? mov.finalStock : '-',
         mov.costPrice.toFixed(2),
         (mov.quantity * mov.costPrice).toFixed(2)
       ]),
@@ -93,8 +101,8 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
         </button>
 
         <div className="mb-6 pr-10">
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight mb-1">Historial de Ingresos</h2>
-          <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm uppercase tracking-wide">{product.name}</p>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight mb-1">Kardex / Historial</h2>
+          <p className="text-emerald-600 dark:text-emerald-400 font-bold text-sm uppercase tracking-wide">{product.name} (Stock Actual: {product.stock})</p>
         </div>
 
         {/* Action Buttons */}
@@ -125,35 +133,54 @@ const InventoryHistoryModal: React.FC<Props> = ({ isOpen, product, onClose, comp
               <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10">
                 <tr className="text-[10px] uppercase font-black text-gray-400 dark:text-gray-500 tracking-widest">
                   <th className="px-4 py-2 text-left">Fecha</th>
-                  <th className="px-4 py-2 text-right">Cantidad</th>
+                  <th className="px-4 py-2 text-left">Tipo / Motivo</th>
+                  <th className="px-2 py-2 text-right">Inicial</th>
+                  <th className="px-2 py-2 text-right">Cant.</th>
+                  <th className="px-2 py-2 text-right">Final</th>
                   <th className="px-4 py-2 text-right">Costo</th>
-                  <th className="px-4 py-2 text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-transparent">
-                {movements.map((mov) => (
-                  <tr key={mov.id} className="bg-gray-50/50 dark:bg-slate-800/40 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
-                      {(() => {
-                        if (!mov.date) return '-';
-                        if (typeof mov.date === 'object' && mov.date !== null && 'seconds' in mov.date) {
-                          return new Date((mov.date as { seconds: number }).seconds * 1000).toLocaleDateString();
-                        }
-                        const d = new Date(mov.date);
-                        return isNaN(d.getTime()) ? '-' : d.toLocaleDateString();
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 text-right font-black text-gray-900 dark:text-white">
-                      {mov.quantity}
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-gray-700 dark:text-gray-300">
-                      S/ {typeof mov.costPrice === 'number' ? mov.costPrice.toFixed(2) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400">
-                      S/ {typeof mov.quantity === 'number' && typeof mov.costPrice === 'number' ? (mov.quantity * mov.costPrice).toFixed(2) : '-'}
-                    </td>
-                  </tr>
-                ))}
+                {movements.map((mov) => {
+                  // Determine colors based on type
+                  const isIngreso = mov.type === 'ingreso' || (mov.type === 'ajuste' && mov.quantity > 0);
+                  const isEgreso = mov.type === 'egreso' || (mov.type === 'ajuste' && mov.quantity < 0);
+
+                  return (
+                    <tr key={mov.id} className="bg-gray-50/50 dark:bg-slate-800/40 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
+                        {(() => {
+                          if (!mov.date) return '-';
+                          if (typeof mov.date === 'object' && mov.date !== null && 'seconds' in mov.date) {
+                            return new Date((mov.date as { seconds: number }).seconds * 1000).toLocaleDateString() + ' ' + new Date((mov.date as { seconds: number }).seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          }
+                          const d = new Date(mov.date);
+                          return isNaN(d.getTime()) ? '-' : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className={`text-xs font-bold uppercase ${isIngreso ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {mov.type}
+                          </span>
+                          <span className="text-[10px] text-gray-400 truncate max-w-[120px]">{mov.motivo || '-'}</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 text-right text-gray-400 text-xs">
+                        {mov.initialStock}
+                      </td>
+                      <td className={`px-2 py-3 text-right font-black ${isIngreso ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isIngreso ? '+' : ''}{mov.quantity}
+                      </td>
+                      <td className="px-2 py-3 text-right font-bold text-gray-900 dark:text-white">
+                        {mov.finalStock}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-500 text-xs">
+                        S/ {typeof mov.costPrice === 'number' ? mov.costPrice.toFixed(2) : '-'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}

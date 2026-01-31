@@ -20,11 +20,25 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Bodegapp Premium",
   description: "Sistema POS Avanzado",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "BodegApp",
+  },
+};
+
+export const viewport = {
+  themeColor: "#10b981",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 import { TenantProvider } from "../contexts/TenantContext";
 import { LowStockProvider } from "../contexts/LowStockContext";
 import { SubscriptionProvider } from "../contexts/SubscriptionContext";
+import SuspensionGuard from "../components/Auth/SuspensionGuard";
 
 export default function RootLayout({
   children,
@@ -40,7 +54,9 @@ export default function RootLayout({
               <SubscriptionProvider>
                 <LowStockProvider>
                   <CartProvider>
-                    {children}
+                    <SuspensionGuard>
+                      {children}
+                    </SuspensionGuard>
                   </CartProvider>
                 </LowStockProvider>
               </SubscriptionProvider>

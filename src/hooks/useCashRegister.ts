@@ -52,7 +52,13 @@ export function useCashRegister() {
                 tenant.id,
                 closingAmount,
                 currentSummary.expected_amount,
-                notes
+                notes,
+                {
+                    salesCash: currentSummary.total_sales_cash,
+                    salesDigital: currentSummary.total_sales_digital,
+                    ingresos: currentSummary.total_ingresos,
+                    egresos: currentSummary.total_egresos
+                }
             );
 
             setCashRegister(null); // Clear active register

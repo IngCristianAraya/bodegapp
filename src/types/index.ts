@@ -8,6 +8,8 @@ export interface Customer {
   email?: string;
   createdAt: Date;
   totalPurchases: number;
+  currentDebt?: number;
+  creditLimit?: number;
 }
 
 export interface Supplier {
@@ -24,6 +26,18 @@ export interface Supplier {
   category?: string;
   products: string[];
   createdAt: Date;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: Date;
+  userId?: string;
+  tenantId: string;
+  createdAt: Date;
+  paidFromCash?: boolean;
 }
 
 export interface Sale extends Record<string, unknown> {

@@ -12,6 +12,13 @@ export interface StoreSettings {
     ticket_footer?: string;
     admin_password?: string;
     admin_pin?: string; // PIN de 4 dígitos para operaciones de caja
+
+    // Campos de Pago
+    yape_qr_url?: string;
+    plin_qr_url?: string;
+    yape_number?: string;
+    plin_number?: string;
+
     updated_at?: string;
 }
 

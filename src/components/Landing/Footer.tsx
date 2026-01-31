@@ -65,7 +65,7 @@ const Footer = () => {
                     <p>&copy; {new Date().getFullYear()} BodegApp SaaS. Todos los derechos reservados.</p>
                     <div className="flex gap-6">
                         <a href="#" className="hover:text-white transition-colors">Privacidad</a>
-                        <a href="#" className="hover:text-white transition-colors">Términos</a>
+                        <Link href="/legal" className="hover:text-white transition-colors">Términos</Link>
                         <a href="#" className="hover:text-white transition-colors">Cookies</a>
                     </div>
                 </div>

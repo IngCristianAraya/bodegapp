@@ -14,6 +14,8 @@ interface TicketVentaProps {
     discount: number;
     igv: number;
     total: number;
+    amountPaid?: number;
+    change?: number;
   };
   settings?: StoreSettings | null;
 }
@@ -83,6 +85,12 @@ const TicketVenta = forwardRef<HTMLDivElement, TicketVentaProps>(({ venta, setti
         <div className="flex justify-between" style={{ fontWeight: 'bold', fontSize: '15px', marginTop: '6px', borderTop: '1px solid #000', paddingTop: '4px' }}>
           <span>TOTAL:</span> <span>S/ {venta.total.toFixed(2)}</span>
         </div>
+        {venta.amountPaid !== undefined && (
+          <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed #ccc' }}>
+            <div className="flex justify-between"><span>PAGO CON:</span> <span>S/ {venta.amountPaid.toFixed(2)}</span></div>
+            <div className="flex justify-between" style={{ fontWeight: 'bold' }}><span>VUELTO:</span> <span>S/ {(venta.change || 0).toFixed(2)}</span></div>
+          </div>
+        )}
       </div>
 
       <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '20px', borderTop: '1px dashed #000', paddingTop: '10px', fontStyle: 'italic', lineHeight: '1.4' }}>

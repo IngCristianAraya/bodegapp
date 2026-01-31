@@ -52,6 +52,34 @@ export async function crearVenta(sale: Sale, tenantId: string): Promise<string> 
         ? saleHeader.customerId
         : null;
 
+    // Validar crédito
+    if (saleHeader.paymentMethod === 'credit') {
+        if (!cleanCustomerId) {
+            throw new Error('Para ventas a crédito, debes seleccionar un cliente.');
+        }
+        // Verificar límite de crédito (opcional doble check, el frontend lo hace, pero el backend protege)
+        const { data: customer, error: custError } = await supabase
+            .from('customers')
+            .select('current_debt, credit_limit')
+            .eq('id', cleanCustomerId)
+            .single();
+
+        if (custError || !customer) throw new Error('Cliente no encontrado para validar crédito.');
+
+        const newDebt = (Number(customer.current_debt) || 0) + saleHeader.total;
+        if (customer.credit_limit && newDebt > customer.credit_limit) {
+            throw new Error(`El cliente excede su límite de crédito. Límite: S/ ${customer.credit_limit}, Deuda Nueva: S/ ${newDebt.toFixed(2)}`);
+        }
+
+        // Actualizar deuda
+        const { error: updateDebtError } = await supabase
+            .from('customers')
+            .update({ current_debt: newDebt })
+            .eq('id', cleanCustomerId);
+
+        if (updateDebtError) throw new Error('Error al actualizar la deuda del cliente.');
+    }
+
     const { data: newSale, error: saleError } = await supabase
         .from('sales')
         .insert([{

@@ -4,8 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useTenant } from '../../contexts/TenantContext';
 import { getStoreSettings, updateStoreSettings, StoreSettings } from '../../lib/supabaseSettings';
 import { useToast } from '../../contexts/ToastContext';
-import { Save, Store, MapPin, Phone, Mail, FileText, Image as ImageIcon, Loader2, Lock, Shield } from 'lucide-react';
+import { Save, Store, MapPin, Phone, Mail, FileText, Image as ImageIcon, Loader2, Lock, Shield, DollarSign } from 'lucide-react';
+
 import Image from 'next/image';
+
+import BackupManager from './BackupManager';
 
 const SettingsPanel: React.FC = () => {
     const { tenant } = useTenant();
@@ -93,6 +96,39 @@ const SettingsPanel: React.FC = () => {
         } catch (error) {
             console.error('Error uploading logo:', error);
             showToast('Error al procesar el logo', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'yape' | 'plin') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'BODEGAPP');
+
+        try {
+            setSaving(true);
+            const res = await fetch('https://api.cloudinary.com/v1_1/dyhgwvz8b/image/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.secure_url) {
+                const update = type === 'yape' ? { yape_qr_url: data.secure_url } : { plin_qr_url: data.secure_url };
+                setSettings((prev: StoreSettings | null) => prev ? { ...prev, ...update } : null);
+
+                // Persistencia inmediata
+                if (tenant?.id) {
+                    await updateStoreSettings(tenant.id, update);
+                }
+                showToast(`QR de ${type.toUpperCase()} subido correctamente`, 'success');
+            }
+        } catch (error) {
+            console.error('Error uploading QR:', error);
+            showToast('Error al procesar la imagen', 'error');
         } finally {
             setSaving(false);
         }
@@ -277,7 +313,7 @@ const SettingsPanel: React.FC = () => {
                             <div className="relative">
                                 <Lock className="absolute left-4 top-3.5 w-5 h-5 text-emerald-500" />
                                 <input
-                                    type="text"
+                                    type="password"
                                     inputMode="numeric"
                                     maxLength={4}
                                     value={settings?.admin_pin || ''}
@@ -310,6 +346,122 @@ const SettingsPanel: React.FC = () => {
                             />
                         </div>
                     </form>
+
+                    {/* Payment Types Section */}
+                    <form className="glass-card bg-white/50 dark:bg-slate-900/50 p-8 rounded-[2rem] border border-white/20 shadow-xl space-y-8">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                                <DollarSign className="w-6 h-6 text-indigo-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Medios de Pago Digitales</h2>
+                                <p className="text-xs text-gray-400">Configura tus QRs para agilizar el cobro</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Yape Config */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white font-bold text-xs">Y</div>
+                                    <h3 className="font-bold text-gray-700 dark:text-gray-200">Yape</h3>
+                                </div>
+
+                                <div className="relative group">
+                                    <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 overflow-hidden flex items-center justify-center bg-gray-50 dark:bg-slate-800/50 transition-colors group-hover:border-purple-400 relative">
+                                        {settings?.yape_qr_url ? (
+                                            <>
+                                                <Image
+                                                    src={settings.yape_qr_url}
+                                                    alt="Yape QR"
+                                                    className="w-full h-full object-cover p-2"
+                                                    width={200}
+                                                    height={200}
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <p className="text-white text-xs font-bold">Cambiar QR</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center p-4">
+                                                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                                <p className="text-xs text-gray-500 text-center font-medium">Subir QR de Yape</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleQrUpload(e, 'yape')}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Número asociado</label>
+                                    <input
+                                        type="tel"
+                                        value={settings?.yape_number || ''}
+                                        onChange={(e) => setSettings(prev => prev ? { ...prev, yape_number: e.target.value } : null)}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 outline-none transition-all text-gray-900 dark:text-white font-medium text-sm"
+                                        placeholder="999 999 999"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Plin Config */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-white font-bold text-xs">P</div>
+                                    <h3 className="font-bold text-gray-700 dark:text-gray-200">Plin</h3>
+                                </div>
+
+                                <div className="relative group">
+                                    <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 overflow-hidden flex items-center justify-center bg-gray-50 dark:bg-slate-800/50 transition-colors group-hover:border-sky-400 relative">
+                                        {settings?.plin_qr_url ? (
+                                            <>
+                                                <Image
+                                                    src={settings.plin_qr_url}
+                                                    alt="Plin QR"
+                                                    className="w-full h-full object-cover p-2"
+                                                    width={200}
+                                                    height={200}
+                                                />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <p className="text-white text-xs font-bold">Cambiar QR</p>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-center p-4">
+                                                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                                <p className="text-xs text-gray-500 text-center font-medium">Subir QR de Plin</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleQrUpload(e, 'plin')}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Número asociado</label>
+                                    <input
+                                        type="tel"
+                                        value={settings?.plin_number || ''}
+                                        onChange={(e) => setSettings(prev => prev ? { ...prev, plin_number: e.target.value } : null)}
+                                        className="w-full px-4 py-2 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-sky-500 outline-none transition-all text-gray-900 dark:text-white font-medium text-sm"
+                                        placeholder="999 999 999"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    {/* Backup Section */}
+                    <BackupManager />
 
                     {/* Preview Section */}
                     <div className="glass-card bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden">

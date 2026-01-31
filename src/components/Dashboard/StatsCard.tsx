@@ -10,6 +10,7 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
+  note?: string;
 }
 
 const colorMap: Record<string, { bgIcon: string, textIcon: string, blob: string, ring: string }> = {
@@ -39,7 +40,7 @@ const colorMap: Record<string, { bgIcon: string, textIcon: string, blob: string,
   }
 };
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, trend }) => {
+const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, trend, note }) => {
   // Extraer el color base (ej: 'bg-emerald-500' -> 'emerald')
   const colorName = color.replace('bg-', '').replace('-500', '') || 'emerald';
   const theme = colorMap[colorName] || colorMap.emerald;
@@ -60,6 +61,10 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon: Icon, color, 
               <span>{trend.value}%</span>
               <span className="text-gray-500 dark:text-gray-400 font-medium ml-1">vs mes anterior</span>
             </div>
+          )}
+
+          {note && (
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 mt-1">{note}</p>
           )}
         </div>
 

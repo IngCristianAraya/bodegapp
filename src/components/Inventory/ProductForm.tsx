@@ -439,6 +439,26 @@ const ProductForm: React.FC<ProductFormProps> = ({
             {form.unitType === 'kg' ? 'La unidad para venta por peso es siempre kilogramo (kg).' : 'Solo aparecen opciones lógicas para venta por unidad.'}
           </span>
         </div>
+
+        {/* Fecha de Vencimiento */}
+        <div className="flex flex-col">
+          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+            Fecha de Vencimiento
+            <span className="text-[10px] text-gray-500 font-normal">(Opcional)</span>
+          </label>
+          <input
+            type="date"
+            className={inputClass}
+            value={form.expirationDate ? new Date(form.expirationDate).toISOString().split('T')[0] : ''}
+            onChange={e => {
+              const dateVal = e.target.value;
+              setForm({ ...form, expirationDate: dateVal ? new Date(dateVal) : undefined });
+            }}
+          />
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 uppercase font-bold italic">
+            Útil para alertas de productos próximos a vencer.
+          </span>
+        </div>
         <div className="flex flex-col">
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
           {proveedores && proveedores.length > 0 ? (

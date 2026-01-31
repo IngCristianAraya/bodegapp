@@ -8,6 +8,8 @@ interface Tenant {
     name: string;
     subdomain: string;
     plan_type: string;
+    status?: 'active' | 'suspended' | 'cancelled'; // New field
+    subscription_plan?: string; // New field
 }
 
 interface TenantContextType {

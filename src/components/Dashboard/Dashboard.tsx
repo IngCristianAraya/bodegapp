@@ -19,6 +19,7 @@ import StockPredictionAlert from './StockPredictionAlert';
 import TemporalComparison from './TemporalComparison';
 import { obtenerVentas } from '../../lib/supabaseSales';
 import { obtenerProductos } from '../../lib/supabaseProducts';
+import { getExpenses } from '../../lib/supabaseExpenses';
 import { useTenant } from '../../contexts/TenantContext';
 import { useLowStock } from '../../contexts/LowStockContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -27,6 +28,9 @@ import { getDeadStock, getSlowMovingStock } from '../../utils/rotationAnalysis';
 import { analyzeProfitability, getAverageStoreMargin } from '../../utils/profitabilityAnalysis';
 import { getCriticalStockAlerts, getWarningStockAlerts } from '../../utils/stockPrediction';
 import { compareWeeks, compareMonths, getBusinessTrend } from '../../utils/temporalAnalysis';
+import OnboardingGuide from '../Onboarding/OnboardingGuide';
+
+// ... existing imports ...
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -38,6 +42,7 @@ const Dashboard: FC = () => {
   const toast = useToast();
   const [ventas, setVentas] = useState<Sale[]>([]);
   const [productos, setProductos] = useState<Product[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; sales: number; revenue: number; imageUrl?: string }[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
   const [hasShownAlert, setHasShownAlert] = useState(false);
@@ -152,12 +157,14 @@ const Dashboard: FC = () => {
     const cargarDatos = async () => {
       if (!tenant?.id) return;
       try {
-        const [ventasCargadas, productosCargados] = await Promise.all([
+        const [ventasCargadas, productosCargados, expensesCargados] = await Promise.all([
           obtenerVentas(tenant.id),
-          obtenerProductos(tenant.id)
+          obtenerProductos(tenant.id),
+          getExpenses(tenant.id)
         ]);
         setVentas(ventasCargadas);
         setProductos(productosCargados);
+        setExpenses(expensesCargados);
       } catch (error) {
         console.error('Error cargando datos del dashboard:', error);
       }
@@ -187,14 +194,27 @@ const Dashboard: FC = () => {
     return fecha.toDateString() === hoy.toDateString();
   }).reduce((acc, v) => acc + (Number(v.total) || 0), 0);
 
-  const ordenesHoy = ventas.filter(v => {
-    if (!v.createdAt) return false;
-    const fecha = v.createdAt instanceof Date ? v.createdAt : new Date(v.createdAt);
+  // Calculate expenses paid from cash only
+  const gastosHoy = expenses.filter(e => {
+    if (!e.date) return false;
+    const fecha = e.date instanceof Date ? e.date : new Date(e.date);
+    const hoy = new Date();
+    // Check for same day AND paid from cash
+    return fecha.toDateString() === hoy.toDateString() && e.paidFromCash;
+  }).reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+  // Total expenses regardless of payment source (for internal reference or secondary display)
+  const totalGastosHoy = expenses.filter(e => {
+    if (!e.date) return false;
+    const fecha = e.date instanceof Date ? e.date : new Date(e.date);
     const hoy = new Date();
     return fecha.toDateString() === hoy.toDateString();
-  }).length;
+  }).reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
 
-  const gananciaHoy = calculateDailyEarnings(ventas, productos);
+  const gananciaBrutaHoy = calculateDailyEarnings(ventas, productos);
+  // Ganancia Neta = Ganancia Bruta (Ventas - Costos) - Gastos Operativos (Caja)
+  const gananciaNetaHoy = gananciaBrutaHoy - gastosHoy;
+
   const stockBajo = productos.filter(p => (p.stock ?? 0) <= (p.minStock ?? 3)).length;
 
   // Analytics: Rotación y Rentabilidad
@@ -238,6 +258,7 @@ const Dashboard: FC = () => {
   return (
     <div className="space-y-8 pb-8 animate-in fade-in zoom-in duration-500">
       {/* Header with Glass Effect */}
+      <OnboardingGuide />
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-heading font-extrabold text-gray-900 dark:text-white tracking-tight">
@@ -261,23 +282,24 @@ const Dashboard: FC = () => {
         {/* Main Stats */}
         <StatsCard
           title="Ventas del Día"
-          value={`S /.${ventasHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })} `}
+          value={`S/ ${ventasHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
           icon={DollarSign}
           color="bg-emerald-500"
           trend={{ value: 12.5, isPositive: true }}
         />
         <StatsCard
-          title="Ganancias"
-          value={`S /.${gananciaHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })} `}
+          title="Ganancia Neta"
+          value={`S/ ${gananciaNetaHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
           icon={TrendingUp}
           color="bg-amber-500"
-          trend={{ value: 8.4, isPositive: true }}
+          note={`Bruta: S/ ${gananciaBrutaHoy.toFixed(2)}`}
         />
         <StatsCard
-          title="Órdenes Hoy"
-          value={ordenesHoy.toString()}
-          icon={ShoppingCart}
-          color="bg-blue-500"
+          title="Gastos de Caja"
+          value={`S/ ${gastosHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
+          icon={Activity}
+          color="bg-rose-500"
+          note={`Total: S/ ${totalGastosHoy.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
         />
         <StatsCard
           title="Stock Crítico"

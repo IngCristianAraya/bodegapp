@@ -26,6 +26,8 @@ import { useCashRegister } from '@/hooks/useCashRegister';
 import CashRegisterModal from '../CashRegister/CashRegisterModal';
 import CashMovementsModal from '../CashRegister/CashMovementsModal';
 import CashHistoryModal from '../CashRegister/CashHistoryModal';
+import CustomerSelector from './CustomerSelector';
+import { Customer } from '../../types/index';
 import { AlertOctagon, RefreshCcw, Lock, History as HistoryIcon, ArrowLeft, Package, Tag } from 'lucide-react';
 
 
@@ -42,6 +44,8 @@ const POS: React.FC = () => {
     discount: number;
     igv: number;
     total: number;
+    amountPaid?: number;
+    change?: number;
   } | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
   // Definir el tipo extendido que incluye la propiedad 'content'
@@ -103,6 +107,9 @@ const POS: React.FC = () => {
   // Estados para Modal de Peso
   const [showPesoModal, setShowPesoModal] = useState(false);
   const [productForPeso, setProductForPeso] = useState<Product | null>(null);
+
+  // Cliente Seleccionado (para Fiado/Crédito)
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   // Resetear subcategoría al cambiar categoría
   useEffect(() => {
@@ -240,7 +247,7 @@ const POS: React.FC = () => {
     }
   };
 
-  const handleCheckout = async (paymentMethod: string) => {
+  const handleCheckout = async (paymentMethod: string, paymentDetails?: { amountPaid: number; change: number }) => {
     // VALIDACIONES ROBUSTAS
     if (!state.items || state.items.length === 0) {
       setSuccessMsg('No hay productos en el carrito.');
@@ -276,6 +283,24 @@ const POS: React.FC = () => {
       return;
     }
 
+    // VALIDACIÓN CRÉDITO
+    if (paymentMethod === 'credit') {
+      if (!selectedCustomer) {
+        setSuccessMsg('⚠️ Debes seleccionar un cliente para vender a Crédito.');
+        setShowSuccess(true);
+        return;
+      }
+      if (selectedCustomer.creditLimit) {
+        const currentDebt = selectedCustomer.currentDebt || 0;
+        const newDebt = currentDebt + state.total;
+        if (newDebt > selectedCustomer.creditLimit) {
+          setSuccessMsg(`⚠️ Excede el límite de crédito del cliente. (Límite: S/ ${selectedCustomer.creditLimit})`);
+          setShowSuccess(true);
+          return;
+        }
+      }
+    }
+
     try {
       // Obtener items del carrito y datos de usuario/empresa
       const cartItems = state.items;
@@ -304,8 +329,8 @@ const POS: React.FC = () => {
         discount: state.discount ?? 0,
         tax: state.tax ?? 0,
         paymentMethod,
-        customerId: '', // Por ahora vacío
-        customerName: '', // Futuro: seleccionar cliente
+        customerId: selectedCustomer?.id || '',
+        customerName: selectedCustomer?.name || '',
         createdAt: new Date(),
         cashierId: user?.id || '',
         cashierName: user?.user_metadata?.full_name || user?.email || '',
@@ -326,6 +351,8 @@ const POS: React.FC = () => {
         discount: venta.discount,
         igv: venta.tax,
         total: venta.total,
+        amountPaid: paymentDetails?.amountPaid,
+        change: paymentDetails?.change,
       });
       setShowTicket(true);
       setTimeout(() => setShowSuccess(false), 3000);
@@ -537,7 +564,11 @@ const POS: React.FC = () => {
         </div>
 
         {/* Cart Section */}
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-4">
+          <CustomerSelector
+            selectedCustomer={selectedCustomer}
+            onSelect={setSelectedCustomer}
+          />
           <Cart
             cart={state.items}
             removeFromCart={removeItem}

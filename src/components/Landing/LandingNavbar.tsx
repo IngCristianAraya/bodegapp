@@ -24,11 +24,33 @@ const LandingNavbar = () => {
         { href: '#contacto', label: 'Contacto' },
     ];
 
+    const handleStoreLogin = () => {
+        // Simple and effective promtp for PWA users
+        const subdomain = window.prompt("Ingresa el nombre de tu bodega (ej: pepito):");
+        if (subdomain) {
+            const protocol = window.location.protocol;
+            const host = window.location.host; // includes port
+            // If localhost, it's usually localhost:3000. 
+            // In prod, it might be bodegapp.com -> subdomain.bodegapp.com
+
+            // Handle Localhost special case
+            if (host.includes('localhost')) {
+                // Remove existing subdomains if any (though usually we are at root here)
+                const parts = host.split('.');
+                const baseHost = parts.length > 1 && !parts[0].includes('localhost') ? parts.slice(1).join('.') : host;
+                window.location.href = `${protocol}//${subdomain}.${baseHost}`;
+            } else {
+                // Production logic (assuming wildcard DNS)
+                window.location.href = `${protocol}//${subdomain}.${host}`;
+            }
+        }
+    };
+
     return (
         <nav
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-                    ? 'bg-slate-900/95 backdrop-blur-lg border-b border-slate-800 shadow-lg'
-                    : 'bg-transparent'
+                ? 'bg-slate-900/95 backdrop-blur-lg border-b border-slate-800 shadow-lg'
+                : 'bg-transparent'
                 }`}
         >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,6 +79,12 @@ const LandingNavbar = () => {
 
                     {/* CTA Buttons */}
                     <div className="hidden md:flex items-center gap-4">
+                        <button
+                            onClick={handleStoreLogin}
+                            className="px-4 py-2 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors border border-emerald-500/30 rounded-lg hover:bg-emerald-500/10"
+                        >
+                            Entrar a mi Bodega
+                        </button>
                         <Link
                             href="/login"
                             className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
@@ -96,6 +124,15 @@ const LandingNavbar = () => {
                             </a>
                         ))}
                         <div className="pt-4 space-y-3 border-t border-slate-800">
+                            <button
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false);
+                                    handleStoreLogin();
+                                }}
+                                className="block w-full text-left px-4 py-2 text-emerald-400 font-medium hover:bg-slate-800 rounded-lg transition-colors border border-emerald-500/20"
+                            >
+                                Entrar a mi Bodega
+                            </button>
                             <Link
                                 href="/login"
                                 className="block px-4 py-2 text-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors font-medium"

@@ -7,7 +7,7 @@ import { crearProducto, agregarIngresoProducto, obtenerProductosConStockYAverage
 import { obtenerProveedores } from '../../lib/supabaseSuppliers';
 import { getStoreSettings } from '../../lib/supabaseSettings';
 import { actualizarProducto, eliminarProducto, archivarProducto } from '../../lib/supabaseProducts';
-import { Plus, TrendingUp, Wallet, Activity, AlertTriangle, Archive } from 'lucide-react';
+import { Plus, TrendingUp, Wallet, Activity, AlertTriangle, Archive, Sparkles } from 'lucide-react';
 import { Product } from '../../types/inventory';
 import { useToast } from '../../contexts/ToastContext';
 import InventoryTable from './InventoryTable';
@@ -20,8 +20,8 @@ import ProductForm from './ProductForm';
 import InventoryFilters from './InventoryFilters';
 import Pagination from './Pagination';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { Sparkles } from 'lucide-react'; // For the modal icon if needed
 import Link from 'next/link';
+import ExpirationAlerts from './ExpirationAlerts';
 
 // Definir el tipo Supplier localmente ya que no se encuentra en el módulo
 interface Supplier {
@@ -263,31 +263,35 @@ const Inventory: React.FC = () => {
           <h1 className="text-3xl font-heading font-black text-gray-900 dark:text-white">Inventario</h1>
           <p className="text-gray-500 dark:text-gray-400 font-medium">Gestiona tus productos y analiza tu rentabilidad</p>
         </div>
-        <button
-          onClick={() => {
-            if (!checkFeatureAccess('inventory_limit')) {
-              // Fallback check if simple boolean check passes but numeric doesn't
-              // Actually checkFeatureAccess returns true for numeric limits effectively
-            }
 
-            const limit = getFeatureLimit('inventory_limit');
-            if (productos.length >= limit) {
-              setShowUpgradeModal(true);
-              return;
-            }
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (!checkFeatureAccess('inventory_limit')) {
+                // Fallback check if simple boolean check passes but numeric doesn't
+                // Actually checkFeatureAccess returns true for numeric limits effectively
+              }
 
-            setForm({ minStock: 5 });
-            setEditProduct(null);
-            setShowAddModal(true);
-          }}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 dark:shadow-none transition-all font-bold active:scale-95"
-        >
-          <Plus size={20} /> Agregar producto
-        </button>
+              const limit = getFeatureLimit('inventory_limit');
+              if (productos.length >= limit) {
+                setShowUpgradeModal(true);
+                return;
+              }
+
+              setForm({ minStock: 5 });
+              setEditProduct(null);
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 dark:shadow-none transition-all font-bold active:scale-95"
+          >
+            <Plus size={20} /> Agregar producto
+          </button>
+        </div>
       </div>
 
       {/* Insights Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group hover:border-emerald-500/30 transition-colors">
           <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl group-hover:scale-110 transition-transform">
             <Wallet size={24} />
@@ -327,6 +331,9 @@ const Inventory: React.FC = () => {
             <p className="text-xl font-black text-red-600 dark:text-red-400">{insights.outOfStockCount} Agotados</p>
           </div>
         </div>
+
+        {/* Expiration Alerts Card (Last position) */}
+        <ExpirationAlerts refreshTrigger={productos} />
       </div>
 
       {/* Filtros */}
@@ -678,53 +685,6 @@ const Inventory: React.FC = () => {
             }
           }}
         />
-      )}
-
-      {showArchiveModal && productToArchive && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm border border-gray-100 dark:border-gray-800 shadow-2xl animate-in fade-in zoom-in duration-200 text-center">
-            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Archive size={32} />
-            </div>
-            <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Producto con Ventas</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              El producto <span className="font-bold text-gray-900 dark:text-white">{productToArchive.name}</span> tiene historial de ventas y no puede eliminarse.
-              <br /><br />
-              ¿Deseas <b>archivarlo</b>? Desaparecerá del POS pero mantendrá sus reportes históricos.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowArchiveModal(false);
-                  setProductToArchive(null);
-                }}
-                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    if (productToArchive.id && tenant?.id) {
-                      await archivarProducto(productToArchive.id, tenant.id);
-                      showToast('Producto archivado correctamente', 'success');
-                      await cargarProductos();
-                    }
-                  } catch (err) {
-                    console.error('Error archiving product:', err);
-                    showToast('Error al archivar el producto', 'error');
-                  } finally {
-                    setShowArchiveModal(false);
-                    setProductToArchive(null);
-                  }
-                }}
-                className="flex-1 px-4 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-bold shadow-lg shadow-amber-200 dark:shadow-none"
-              >
-                Archivar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {showArchiveModal && productToArchive && (
